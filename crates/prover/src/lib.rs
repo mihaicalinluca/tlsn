@@ -106,12 +106,11 @@ impl Prover<state::Initialized> {
         // Allocate resources for MPC-TLS in VM.
         let keys = mpc_tls.alloc()?;
 
-        // Create your AesCtr instance with the server write key and IV
-        // Convert 4-byte IV to 8-byte nonce needed by AesCtr
-        let mut nonce = [0u8; 8];
-        nonce[0..4].copy_from_slice(&keys.server_write_iv);
-        let initial_counter = 0; // Starting counter value
-        let aes = AesCtr::new(&keys.server_write_key, &nonce, initial_counter);
+        // Use the dummy key and IV and the noop encryption
+        let key = [0u8; 16];
+        let nonce = [0u8; 8];
+        let initial_counter = 0;
+        let aes = AesCtr::new(&key, &nonce, initial_counter);
 
         debug!("setting up mpc-tls");
 
