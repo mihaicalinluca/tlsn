@@ -4,6 +4,9 @@
 #![deny(clippy::all)]
 #![forbid(unsafe_code)]
 
+mod dummy_zk;
+pub use dummy_zk::DummyZk;
+
 use std::{
     mem,
     sync::{
