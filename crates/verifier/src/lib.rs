@@ -26,7 +26,7 @@ use state::{Notarize, Verify};
 use tls_core::msgs::enums::ContentType;
 use tlsn_common::{
     commit::commit_records, config::ProtocolConfig, context::build_mt_context, mux::attach_mux,
-    zk_aes::ZkAesCtr, Role,
+    zk_aes::AesCtr, Role,
 };
 use tlsn_core::{
     attestation::{Attestation, AttestationConfig},
@@ -112,13 +112,13 @@ impl Verifier<state::Initialized> {
 
         // Allocate resources for MPC-TLS in VM.
         let keys = mpc_tls.alloc()?;
-        // Allocate for committing to plaintext.
-        let mut zk_aes = ZkAesCtr::new(Role::Verifier);
-        zk_aes.set_key(keys.server_write_key, keys.server_write_iv);
-        zk_aes.alloc(
-            &mut (*vm.try_lock().expect("VM is not locked").zk()),
-            protocol_config.max_recv_data(),
-        )?;
+
+        // Create your AesCtr instance with the server write key and IV
+        // Convert 4-byte IV to 8-byte nonce needed by AesCtr
+        let mut nonce = [0u8; 8];
+        nonce[0..4].copy_from_slice(&keys.server_write_iv);
+        let initial_counter = 0; // Starting counter value
+        let aes = AesCtr::new(&keys.server_write_key, &nonce, initial_counter);
 
         debug!("setting up mpc-tls");
 
@@ -135,7 +135,7 @@ impl Verifier<state::Initialized> {
                 mt,
                 delta,
                 mpc_tls,
-                zk_aes,
+                zk_aes: aes,
                 _keys: keys,
                 vm,
             },
@@ -224,6 +224,7 @@ impl Verifier<state::Setup> {
             let mut vm = vm.try_lock().expect("VM should not be locked");
 
             // Prepare for the prover to prove received plaintext.
+            // TODO: Change this to avoid zk
             let proof = commit_records(
                 &mut (*vm.zk()),
                 &mut zk_aes,

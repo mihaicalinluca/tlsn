@@ -11,6 +11,7 @@ pub mod encoding;
 pub mod msg;
 pub mod mux;
 pub mod transcript;
+/// Simple AES-CTR encryption, no zero-knowledge.
 pub mod zk_aes;
 
 /// The party's role in the TLSN protocol.

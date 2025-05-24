@@ -1,6 +1,6 @@
 use mpc_tls::MpcTlsError;
 use std::{error::Error, fmt};
-use tlsn_common::{encoding::EncodingError, zk_aes::ZkAesCtrError};
+use tlsn_common::{encoding::EncodingError, zk_aes::AesCtrError};
 
 /// Error for [`Verifier`](crate::Verifier).
 #[derive(Debug, thiserror::Error)]
@@ -112,8 +112,8 @@ impl From<MpcTlsError> for VerifierError {
     }
 }
 
-impl From<ZkAesCtrError> for VerifierError {
-    fn from(e: ZkAesCtrError) -> Self {
+impl From<AesCtrError> for VerifierError {
+    fn from(e: AesCtrError) -> Self {
         Self::new(ErrorKind::Zk, e)
     }
 }

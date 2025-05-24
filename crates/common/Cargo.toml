@@ -16,6 +16,8 @@ mpz-common = { workspace = true }
 mpz-memory-core = { workspace = true }
 mpz-vm-core = { workspace = true }
 mpz-zk = { workspace = true }
+aes = "0.8"
+ctr = "0.9"
 
 async-trait = { workspace = true }
 derive_builder = { workspace = true }

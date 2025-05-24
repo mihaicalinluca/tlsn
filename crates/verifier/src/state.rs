@@ -9,7 +9,7 @@ use mpz_memory_core::correlated::Delta;
 use tlsn_common::{
     mux::{MuxControl, MuxFuture},
     transcript::TranscriptRefs,
-    zk_aes::ZkAesCtr,
+    zk_aes::AesCtr,
 };
 use tlsn_core::connection::{ConnectionInfo, ServerEphemKey};
 use tlsn_deap::Deap;
@@ -30,7 +30,7 @@ pub struct Setup {
     pub(crate) mt: Multithread,
     pub(crate) delta: Delta,
     pub(crate) mpc_tls: MpcTlsFollower,
-    pub(crate) zk_aes: ZkAesCtr,
+    pub(crate) zk_aes: AesCtr,
     pub(crate) _keys: SessionKeys,
     pub(crate) vm: Arc<Mutex<Deap<Mpc, Zk>>>,
 }

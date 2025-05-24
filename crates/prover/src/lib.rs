@@ -29,7 +29,7 @@ use tls_client::{ClientConnection, ServerName as TlsServerName};
 use tls_client_async::{bind_client, TlsConnection};
 use tls_core::msgs::enums::ContentType;
 use tlsn_common::{
-    commit::commit_records, context::build_mt_context, mux::attach_mux, zk_aes::ZkAesCtr, Role,
+    commit::commit_records, context::build_mt_context, mux::attach_mux, zk_aes::AesCtr, Role,
 };
 use tlsn_core::{
     connection::{
@@ -105,13 +105,13 @@ impl Prover<state::Initialized> {
 
         // Allocate resources for MPC-TLS in VM.
         let keys = mpc_tls.alloc()?;
-        // Allocate for committing to plaintext.
-        let mut zk_aes = ZkAesCtr::new(Role::Prover);
-        zk_aes.set_key(keys.server_write_key, keys.server_write_iv);
-        zk_aes.alloc(
-            &mut (*vm.try_lock().expect("VM is not locked").zk()),
-            self.config.protocol_config().max_recv_data(),
-        )?;
+
+        // Create your AesCtr instance with the server write key and IV
+        // Convert 4-byte IV to 8-byte nonce needed by AesCtr
+        let mut nonce = [0u8; 8];
+        nonce[0..4].copy_from_slice(&keys.server_write_iv);
+        let initial_counter = 0; // Starting counter value
+        let aes = AesCtr::new(&keys.server_write_key, &nonce, initial_counter);
 
         debug!("setting up mpc-tls");
 
@@ -127,7 +127,7 @@ impl Prover<state::Initialized> {
                 mux_fut,
                 mt,
                 mpc_tls,
-                zk_aes,
+                zk_aes: aes,
                 keys,
                 vm,
             },
@@ -208,6 +208,8 @@ impl Prover<state::Setup> {
 
                     // Prove received plaintext. Prover drops the proof output, as they trust
                     // themselves.
+
+                    // TODO: Change this to avoid zk
                     _ = commit_records(
                         &mut (*vm.zk()),
                         &mut zk_aes,
@@ -373,9 +375,10 @@ fn build_mpc_tls(config: &ProverConfig, ctx: Context) -> (Arc<Mutex<Deap<Mpc, Zk
         rng.random(),
         delta,
     );
-
+    // TODO: Change this to avoid zk
     let zk = Zk::new(rcot_recv.next().expect("enough receivers are available"));
 
+    // actually keep this, but with dummyZK
     let vm = Arc::new(Mutex::new(Deap::new(tlsn_deap::Role::Leader, mpc, zk)));
 
     (

@@ -6,7 +6,7 @@ use mpz_vm_core::{prelude::*, Vm};
 
 use crate::{
     transcript::Record,
-    zk_aes::{ZkAesCtr, ZkAesCtrError},
+    zk_aes::{AesCtr, AesCtrError},
     Role,
 };
 
@@ -16,7 +16,7 @@ use crate::{
 /// Writes the plaintext VM reference to the provided records.
 pub fn commit_records<'record>(
     vm: &mut dyn Vm<Binary>,
-    aes: &mut ZkAesCtr,
+    aes: &mut AesCtr,
     records: impl IntoIterator<Item = &'record mut Record>,
 ) -> Result<RecordProof, RecordProofError> {
     let mut ciphertexts = Vec::new();
@@ -25,23 +25,8 @@ pub fn commit_records<'record>(
             return Err(ErrorRepr::PlaintextRefAlreadySet.into());
         }
 
-        let (plaintext_ref, ciphertext_ref) = aes
-            .encrypt(vm, record.explicit_nonce.clone(), record.ciphertext.len())
-            .map_err(ErrorRepr::Aes)?;
+        let ciphertext = aes.encrypt(&record.ciphertext);
 
-        record.plaintext_ref = Some(plaintext_ref);
-
-        if let Role::Prover = aes.role() {
-            let Some(plaintext) = record.plaintext.clone() else {
-                return Err(ErrorRepr::MissingPlaintext.into());
-            };
-
-            vm.assign(plaintext_ref, plaintext)
-                .map_err(RecordProofError::vm)?;
-        }
-        vm.commit(plaintext_ref).map_err(RecordProofError::vm)?;
-
-        let ciphertext = vm.decode(ciphertext_ref).map_err(RecordProofError::vm)?;
         ciphertexts.push((ciphertext, record.ciphertext.clone()));
     }
 
@@ -53,7 +38,7 @@ pub fn commit_records<'record>(
 #[must_use]
 #[allow(clippy::type_complexity)]
 pub struct RecordProof {
-    ciphertexts: Vec<(DecodeFutureTyped<BitVec, Vec<u8>>, Vec<u8>)>,
+    ciphertexts: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
 impl RecordProof {
@@ -62,11 +47,6 @@ impl RecordProof {
         let Self { ciphertexts } = self;
 
         for (mut ciphertext, expected) in ciphertexts {
-            let ciphertext = ciphertext
-                .try_recv()
-                .map_err(RecordProofError::vm)?
-                .ok_or_else(|| ErrorRepr::NotDecoded)?;
-
             if ciphertext != expected {
                 return Err(ErrorRepr::InvalidCiphertext.into());
             }
@@ -95,8 +75,8 @@ impl RecordProofError {
 enum ErrorRepr {
     #[error("VM error: {0}")]
     Vm(Box<dyn std::error::Error + Send + Sync + 'static>),
-    #[error("zk aes error: {0}")]
-    Aes(ZkAesCtrError),
+    #[error("simple aes error: {0}")]
+    Aes(AesCtrError),
     #[error("plaintext is missing")]
     MissingPlaintext,
     #[error("plaintext reference is already set")]
