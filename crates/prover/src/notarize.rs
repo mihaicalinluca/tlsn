@@ -5,6 +5,7 @@
 
 use super::{state::Notarize, Prover, ProverError};
 use serio::{stream::IoStreamExt as _, SinkExt as _};
+use tlsn_common::commit::commit_entire_transcript;
 use tlsn_common::encoding;
 use tlsn_core::{
     attestation::Attestation,
@@ -22,7 +23,11 @@ impl Prover<Notarize> {
 
     /// Configures transcript commitments.
     pub fn transcript_commit(&mut self, config: TranscriptCommitConfig) {
-        self.state.transcript_commit_config = Some(config);
+        // self.state.transcript_commit_config = Some(config);
+
+        // Ignore the provided config and always commit the entire transcript
+        // to bypass selective disclosure
+        self.state.transcript_commit_config = Some(commit_entire_transcript(self.transcript()));
     }
 
     /// Finalizes the notarization.
