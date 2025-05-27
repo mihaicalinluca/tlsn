@@ -3,6 +3,7 @@
 use mpz_core::bitvec::BitVec;
 use mpz_memory_core::{binary::Binary, DecodeFutureTyped};
 use mpz_vm_core::{prelude::*, Vm};
+use tlsn_core::transcript::{Transcript, TranscriptCommitConfig, TranscriptCommitConfigBuilder};
 
 use crate::{
     transcript::Record,
@@ -31,6 +32,26 @@ pub fn commit_records<'record>(
     }
 
     Ok(RecordProof { ciphertexts })
+}
+
+/// Commits the entire transcript for both sent and received data
+/// This bypasses selective disclosure by including everything
+pub fn commit_entire_transcript(transcript: &Transcript) -> TranscriptCommitConfig {
+    let mut builder = TranscriptCommitConfigBuilder::new(transcript);
+
+    // Commit the entire sent data
+    if transcript.sent().len() > 0 {
+        builder.commit_sent(&(0..transcript.sent().len())).unwrap();
+    }
+
+    // Commit the entire received data
+    if transcript.received().len() > 0 {
+        builder
+            .commit_recv(&(0..transcript.received().len()))
+            .unwrap();
+    }
+
+    builder.build().unwrap()
 }
 
 /// Proof of encryption.

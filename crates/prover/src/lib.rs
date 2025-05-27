@@ -38,7 +38,7 @@ use tlsn_core::{
     },
     transcript::Transcript,
 };
-use tlsn_deap::Deap;
+use tlsn_deap::{Deap, DummyZk};
 use tokio::sync::Mutex;
 
 use tracing::{debug, info_span, instrument, Instrument, Span};
@@ -374,7 +374,10 @@ fn build_mpc_tls(config: &ProverConfig, ctx: Context) -> (Arc<Mutex<Deap<Mpc, Zk
         rng.random(),
         delta,
     );
+
     // TODO: Change this to avoid zk
+    // For now, we need to use the zk VM for get_macs() in the mpc
+    // let zk = DummyZk::new(());
     let zk = Zk::new(rcot_recv.next().expect("enough receivers are available"));
 
     // actually keep this, but with dummyZK

@@ -319,7 +319,6 @@ impl<'a> TranscriptProofBuilder<'a> {
     }
 
     /// Builds the transcript proof.
-    /// Builds the transcript proof.
     pub fn build(self) -> Result<TranscriptProof, TranscriptProofBuilderError> {
         let mut transcript_proof = TranscriptProof {
             encoding_proof: None,

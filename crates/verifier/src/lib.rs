@@ -358,6 +358,9 @@ fn build_mpc_tls(
         rcot_recv.next().expect("receivers should be available"),
     ));
 
+    // TODO: Change this to avoid zk
+    // For now, we need to use the zk VM for get_macs() in the mpc
+    // let zk = DummyZk::new(());
     let zk = Zk::new(
         delta,
         rcot_send.next().expect("senders should be available"),

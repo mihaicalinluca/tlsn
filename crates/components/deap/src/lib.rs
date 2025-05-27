@@ -115,6 +115,17 @@ where
     /// This reveals all private inputs of the follower.
     pub async fn finalize(&mut self, ctx: &mut Context) -> Result<(), VmError> {
         let mut mpc = self.mpc.try_lock().unwrap();
+
+        // Keep it like this for now
+        // Check if we're using a DummyZk
+        let is_dummy_zk = std::any::TypeId::of::<Zk>() == std::any::TypeId::of::<DummyZk>();
+
+        if is_dummy_zk {
+            // For DummyZk, just run the MPC part and skip ZK operations
+            mpc.execute_all(ctx).await?;
+            return Ok(());
+        }
+
         let mut zk = self.zk.try_lock().unwrap();
 
         // Decode the private inputs of the follower.
