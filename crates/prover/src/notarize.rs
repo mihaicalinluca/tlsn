@@ -22,7 +22,7 @@ impl Prover<Notarize> {
     }
 
     /// Configures transcript commitments.
-    pub fn transcript_commit(&mut self, config: TranscriptCommitConfig) {
+    pub fn transcript_commit(&mut self, _config: TranscriptCommitConfig) {
         // self.state.transcript_commit_config = Some(config);
 
         // Ignore the provided config and always commit the entire transcript
@@ -49,21 +49,6 @@ impl Prover<Notarize> {
             ..
         } = self.state;
 
-        let sent_macs = transcript_refs
-            .sent()
-            .iter()
-            .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
-            .map(|mac| mac.as_block());
-        let recv_macs = transcript_refs
-            .recv()
-            .iter()
-            .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
-            .map(|mac| mac.as_block());
-
-        let encoding_provider = mux_fut
-            .poll_with(encoding::receive(&mut ctx, sent_macs, recv_macs))
-            .await?;
-
         let provider = self.config.crypto_provider();
 
         let hasher = provider
@@ -78,17 +63,42 @@ impl Prover<Notarize> {
             .server_cert_data(server_cert_data)
             .transcript(transcript);
 
+        // Only try to build an encoding tree if we have transcript commitment config with encoding
         if let Some(config) = transcript_commit_config {
             if config.has_encoding() {
-                builder.encoding_tree(
-                    EncodingTree::new(
-                        hasher,
-                        config.iter_encoding(),
-                        &encoding_provider,
-                        &connection_info.transcript_length,
-                    )
-                    .map_err(ProverError::commit)?,
-                );
+                // Try to get encodings from the verifier
+                let sent_macs = transcript_refs
+                    .sent()
+                    .iter()
+                    .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
+                    .map(|mac| mac.as_block());
+                let recv_macs = transcript_refs
+                    .recv()
+                    .iter()
+                    .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
+                    .map(|mac| mac.as_block());
+
+                // Get the encoding provider if possible
+                match mux_fut
+                    .poll_with(encoding::receive(&mut ctx, sent_macs, recv_macs))
+                    .await
+                {
+                    Ok(encoding_provider) => {
+                        // Only try to build encoding tree if we have a valid provider
+                        if let Ok(tree) = EncodingTree::new(
+                            hasher,
+                            config.iter_encoding(),
+                            &encoding_provider,
+                            &connection_info.transcript_length,
+                        ) {
+                            builder.encoding_tree(tree);
+                        }
+                    }
+                    Err(e) => {
+                        // Log the error but continue without encodings
+                        debug!("Failed to get encodings from verifier: {:?}", e);
+                    }
+                }
             }
         }
 

@@ -4,8 +4,8 @@ use tls_server_fixture::CA_CERT_DER;
 use tlsn_core::CryptoProvider;
 
 // Set these to extremely high values (1GB) to effectively remove limits
-pub const MAX_SENT_DATA: usize = 1 << 30;
-pub const MAX_RECV_DATA: usize = 1 << 30;
+pub const MAX_SENT_DATA: usize = 1 << 16; // 64 KB (16x original)
+pub const MAX_RECV_DATA: usize = 1 << 17; // 128 KB (8x original)
 
 /// crypto provider accepting the server-fixture's self-signed certificate
 ///

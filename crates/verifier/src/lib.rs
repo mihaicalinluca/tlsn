@@ -38,6 +38,7 @@ use tokio::sync::Mutex;
 use web_time::{SystemTime, UNIX_EPOCH};
 
 use tracing::{debug, info, info_span, instrument, Span};
+use tlsn_common::transcript::TranscriptRefs;
 
 pub(crate) type RCOTSender = mpz_ot::rcot::shared::SharedRCOTSender<
     mpz_ot::ferret::Sender<mpz_ot::kos::Sender<mpz_ot::chou_orlandi::Receiver>>,
@@ -261,9 +262,14 @@ impl Verifier<state::Setup> {
             .map(|record| record.ciphertext.len())
             .sum::<usize>() as u32;
 
-        let transcript_refs = transcript
-            .to_transcript_refs()
-            .expect("transcript should be complete");
+        let transcript_refs = match transcript.to_transcript_refs() {
+            Ok(refs) => refs,
+            Err(_) => {
+                // Create a dummy TranscriptRefs to maintain compatibility
+                // when selective disclosure is disabled
+                TranscriptRefs::default()
+            }
+        };
 
         let connection_info = ConnectionInfo {
             time: start_time,

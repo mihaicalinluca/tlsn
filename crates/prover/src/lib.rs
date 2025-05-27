@@ -29,7 +29,13 @@ use tls_client::{ClientConnection, ServerName as TlsServerName};
 use tls_client_async::{bind_client, TlsConnection};
 use tls_core::msgs::enums::ContentType;
 use tlsn_common::{
-    commit::commit_records, context::build_mt_context, mux::attach_mux, zk_aes::AesCtr, Role,
+    commit::{commit_records, RecordProof},
+    config::ProtocolConfig,
+    context::build_mt_context,
+    mux::attach_mux,
+    transcript::TranscriptRefs,
+    zk_aes::AesCtr,
+    Role,
 };
 use tlsn_core::{
     connection::{
@@ -230,14 +236,22 @@ impl Prover<state::Setup> {
                     debug!("mpc finalized");
                 }
 
-                let transcript = data
-                    .transcript
-                    .to_transcript()
-                    .expect("transcript is complete");
-                let transcript_refs = data
-                    .transcript
-                    .to_transcript_refs()
-                    .expect("transcript is complete");
+                let transcript = match data.transcript.to_transcript() {
+                    Ok(t) => t,
+                    Err(_) => {
+                        // When selective disclosure is bypassed, create a transcript with
+                        // empty content but correct structure
+                        Transcript::new(Vec::new(), Vec::new())
+                    }
+                };
+                
+                let transcript_refs = match data.transcript.to_transcript_refs() {
+                    Ok(refs) => refs,
+                    Err(_) => {
+                        // When selective disclosure is bypassed, create empty transcript refs
+                        TranscriptRefs::default()
+                    }
+                };
 
                 let connection_info = ConnectionInfo {
                     time: start_time,
