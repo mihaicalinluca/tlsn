@@ -24,13 +24,26 @@ where
     <C as AdditiveToMultiplicative<P256>>::Future: Send,
     <C as MultiplicativeToAdditive<P256>>::Future: Send,
 {
+    // Role to actual entity for clearer logging
+    let entity_name = match role {
+        Role::Leader => "PROVER",
+        Role::Follower => "NOTARY",
+    };
+    
+    println!("[KEY DERIVATION] Deriving x-coordinate share for {}", entity_name);
+    println!("[KEY DERIVATION] {} Input point: {:02x?}", entity_name, share.as_bytes());
+    
     let [x, y] = decompose_point(share)?;
+    println!("[KEY DERIVATION] {} Decomposed point - x: {:02x?}, y: {:02x?}", 
+             entity_name, x.to_be_bytes(), y.to_be_bytes());
 
     // Follower negates their share coordinates.
     let inputs = match role {
         Role::Leader => vec![y, x],
         Role::Follower => vec![-y, -x],
     };
+    
+    println!("[KEY DERIVATION] {} Converted inputs", entity_name);
 
     let a2m = converter
         .queue_to_multiplicative(&inputs)
@@ -47,11 +60,16 @@ where
         .shares
         .try_into()
         .expect("output is same length as input");
+        
+    println!("[KEY DERIVATION] {} Processed shares a: {:02x?}, b: {:02x?}", 
+             entity_name, a.to_be_bytes(), b.to_be_bytes());
 
     let c = a * b
         .inverse()
         .expect("field element should not be zero when inverting");
     let c = c * c;
+    
+    println!("[KEY DERIVATION] {} Computed c: {:02x?}", entity_name, c.to_be_bytes());
 
     let m2a = converter
         .queue_to_additive(&[c])
@@ -68,6 +86,8 @@ where
         .shares[0];
 
     let x_r = d + -x;
+    
+    println!("[KEY DERIVATION] {} Final x_r share: {:02x?}", entity_name, x_r.to_be_bytes());
 
     Ok(x_r)
 }

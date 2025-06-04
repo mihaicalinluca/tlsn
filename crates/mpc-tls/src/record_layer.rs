@@ -231,6 +231,18 @@ impl RecordLayer {
             .decrypt
             .try_lock()
             .map_err(|_| MpcTlsError::other("decrypt lock is held"))?;
+            
+        // Role to actual entity for clearer logging
+        let entity_name = match self.role {
+            Role::Leader => "PROVER",
+            Role::Follower => "NOTARY",
+        };
+            
+        println!("[RECORD LAYER] Setting TLS record layer keys for {}", entity_name);
+        println!("[RECORD LAYER] {} Client write key: {:02x?}", entity_name, client_write_key);
+        println!("[RECORD LAYER] {} Client IV: {:02x?}", entity_name, client_iv);
+        println!("[RECORD LAYER] {} Server write key: {:02x?}", entity_name, server_write_key);
+        println!("[RECORD LAYER] {} Server IV: {:02x?}", entity_name, server_iv);
 
         encrypt.set_key(client_write_key);
         encrypt.set_iv(client_iv);
@@ -331,6 +343,12 @@ impl RecordLayer {
                 "attempted to receive more data than was configured, increase `max_recv` in the config: current={}, additional={}, max={}",
                 self.recv, ciphertext.len(), self.max_recv
             )));
+        }
+
+        if typ == ContentType::ApplicationData {
+            println!("[PROVER RECORD LAYER] TLS ENCRYPTED DATA FROM SERVER (Application Data): {:02x?}", ciphertext);
+            println!("   ^ This is the encrypted HTTP data as received from the server before decryption");
+            println!("   ^ Content Type: {:?}, Version: {:?}, Mode: {:?}", typ, version, mode);
         }
 
         let (seq, aad) = self.next_read(typ, version, ciphertext.len());
@@ -503,6 +521,24 @@ impl RecordLayer {
                 version: op.version,
                 plaintext: plaintext.clone(),
             });
+
+            // Print the actual decrypted data with more descriptive information
+            if op.typ == ContentType::ApplicationData && plaintext.is_some() {
+                println!("[PROVER RECORD LAYER] DECRYPTED HTTP DATA (Application Data): {:02x?}", plaintext);
+                println!("   ^ This is the plaintext HTTP data after TLS decryption");
+                println!("   ^ Content Type: {:?}, Sequence: {}", op.typ, op.seq);
+                
+                // Try to show a basic text preview if it seems like HTTP
+                if let Some(data) = plaintext.as_ref() {
+                    if !data.is_empty() {
+                        if let Ok(text) = std::str::from_utf8(data) {
+                            if text.starts_with("HTTP/") || text.contains("HTTP/") {
+                                println!("   ^ HTTP Response Preview: {}", text.lines().next().unwrap_or(""));
+                            }
+                        }
+                    }
+                }
+            }
 
             recv_records.push(Record {
                 seq: op.seq,

@@ -49,6 +49,15 @@ impl Prover<Notarize> {
             ..
         } = self.state;
 
+        println!("[NOTARIZE] TLS Session Information:");
+        println!("[NOTARIZE] Connection Time: {:?}", connection_info.time);
+        println!("[NOTARIZE] TLS Version: {:?}", connection_info.version);
+        println!("[NOTARIZE] Transcript Length: {:?}", connection_info.transcript_length);
+        
+        println!("[NOTARIZE] Raw Transcript Data:");
+        println!("[NOTARIZE] Sent data ({}): {:02x?}", transcript.sent().len(), transcript.sent());
+        println!("[NOTARIZE] Received data ({}): {:02x?}", transcript.received().len(), transcript.received());
+
         let provider = self.config.crypto_provider();
 
         let hasher = provider
@@ -111,6 +120,16 @@ impl Prover<Notarize> {
                 ctx.io_mut().send(request.clone()).await?;
 
                 let attestation: Attestation = ctx.io_mut().expect_next().await?;
+                
+                // Print the attestation with more descriptive information
+                println!("[NOTARIZE] Final Attestation:");
+                println!("[NOTARIZE] NOTARY ATTESTATION (Full Final Proof): {:?}", attestation);
+                println!("[NOTARIZE] Signature: {:?}", attestation.signature);
+                println!("[NOTARIZE] Header: {:?}", attestation.header);
+                println!("[NOTARIZE] Body: {:?}", attestation.body);
+                println!("   ^ This is the final attestation from the notary that proves the TLS session");
+                println!("   ^ It contains cryptographic proof that the session occurred with the specified server");
+                println!("   ^ This attestation will be used to verify the authenticity of the data");
 
                 Ok::<_, ProverError>(attestation)
             })
