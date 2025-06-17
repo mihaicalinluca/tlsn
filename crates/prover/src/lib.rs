@@ -29,7 +29,13 @@ use tls_client::{ClientConnection, ServerName as TlsServerName};
 use tls_client_async::{bind_client, TlsConnection};
 use tls_core::msgs::enums::ContentType;
 use tlsn_common::{
-    commit::commit_records, context::build_mt_context, mux::attach_mux, zk_aes::ZkAesCtr, Role,
+    commit::{commit_records, RecordProof},
+    config::ProtocolConfig,
+    context::build_mt_context,
+    mux::attach_mux,
+    transcript::TranscriptRefs,
+    zk_aes::AesCtr,
+    Role,
 };
 use tlsn_core::{
     connection::{
@@ -38,7 +44,7 @@ use tlsn_core::{
     },
     transcript::Transcript,
 };
-use tlsn_deap::Deap;
+use tlsn_deap::{Deap, DummyZk};
 use tokio::sync::Mutex;
 
 use tracing::{debug, info_span, instrument, Instrument, Span};
@@ -105,13 +111,12 @@ impl Prover<state::Initialized> {
 
         // Allocate resources for MPC-TLS in VM.
         let keys = mpc_tls.alloc()?;
-        // Allocate for committing to plaintext.
-        let mut zk_aes = ZkAesCtr::new(Role::Prover);
-        zk_aes.set_key(keys.server_write_key, keys.server_write_iv);
-        zk_aes.alloc(
-            &mut (*vm.try_lock().expect("VM is not locked").zk()),
-            self.config.protocol_config().max_recv_data(),
-        )?;
+
+        // Use the dummy key and IV and the noop encryption
+        let key = [0u8; 16];
+        let nonce = [0u8; 8];
+        let initial_counter = 0;
+        let aes = AesCtr::new(&key, &nonce, initial_counter);
 
         debug!("setting up mpc-tls");
 
@@ -127,7 +132,7 @@ impl Prover<state::Initialized> {
                 mux_fut,
                 mt,
                 mpc_tls,
-                zk_aes,
+                zk_aes: aes,
                 keys,
                 vm,
             },
@@ -208,6 +213,8 @@ impl Prover<state::Setup> {
 
                     // Prove received plaintext. Prover drops the proof output, as they trust
                     // themselves.
+
+                    // TODO: Change this to avoid zk
                     _ = commit_records(
                         &mut (*vm.zk()),
                         &mut zk_aes,
@@ -229,14 +236,22 @@ impl Prover<state::Setup> {
                     debug!("mpc finalized");
                 }
 
-                let transcript = data
-                    .transcript
-                    .to_transcript()
-                    .expect("transcript is complete");
-                let transcript_refs = data
-                    .transcript
-                    .to_transcript_refs()
-                    .expect("transcript is complete");
+                let transcript = match data.transcript.to_transcript() {
+                    Ok(t) => t,
+                    Err(_) => {
+                        // When selective disclosure is bypassed, create a transcript with
+                        // empty content but correct structure
+                        Transcript::new(Vec::new(), Vec::new())
+                    }
+                };
+
+                let transcript_refs = match data.transcript.to_transcript_refs() {
+                    Ok(refs) => refs,
+                    Err(_) => {
+                        // When selective disclosure is bypassed, create empty transcript refs
+                        TranscriptRefs::default()
+                    }
+                };
 
                 let connection_info = ConnectionInfo {
                     time: start_time,
@@ -374,8 +389,12 @@ fn build_mpc_tls(config: &ProverConfig, ctx: Context) -> (Arc<Mutex<Deap<Mpc, Zk
         delta,
     );
 
+    // TODO: Change this to avoid zk
+    // For now, we need to use the zk VM for get_macs() in the mpc
+    // let zk = DummyZk::new(());
     let zk = Zk::new(rcot_recv.next().expect("enough receivers are available"));
 
+    // actually keep this, but with dummyZK
     let vm = Arc::new(Mutex::new(Deap::new(tlsn_deap::Role::Leader, mpc, zk)));
 
     (

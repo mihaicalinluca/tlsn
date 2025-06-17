@@ -324,77 +324,25 @@ impl<'a> TranscriptProofBuilder<'a> {
             encoding_proof: None,
             hash_proofs: Vec::new(),
         };
-        let mut uncovered_query_idx = self.query_idx.clone();
-        let mut commitment_kinds_iter = self.commitment_kinds.iter();
 
-        // Tries to cover the query ranges with committed ranges.
-        while !uncovered_query_idx.is_empty() {
-            // Committed ranges of different kinds are checked in order of preference set in
-            // self.commitment_kinds.
-            if let Some(kind) = commitment_kinds_iter.next() {
-                match kind {
-                    TranscriptCommitmentKind::Encoding => {
-                        let Some(encoding_tree) = self.encoding_tree else {
-                            // Proceeds to the next preferred commitment kind if encoding tree is
-                            // not available.
-                            continue;
-                        };
+        // For encoding commitments
+        if self
+            .commitment_kinds
+            .contains(&TranscriptCommitmentKind::Encoding)
+        {
+            if let Some(encoding_tree) = self.encoding_tree {
+                // Get all available indices from the encoding tree
+                let dir_idxs = encoding_tree.transcript_indices().collect::<Vec<_>>();
 
-                        let (sent_dir_idxs, sent_uncovered) =
-                            uncovered_query_idx.sent.as_range_set().cover_by(
-                                encoding_tree
-                                    .transcript_indices()
-                                    .filter(|(dir, _)| *dir == Direction::Sent),
-                                |(_, idx)| &idx.0,
-                            );
-                        // Uncovered ranges will be checked with ranges of the next
-                        // preferred commitment kind.
-                        uncovered_query_idx.sent = Idx(sent_uncovered);
-
-                        let (recv_dir_idxs, recv_uncovered) =
-                            uncovered_query_idx.recv.as_range_set().cover_by(
-                                encoding_tree
-                                    .transcript_indices()
-                                    .filter(|(dir, _)| *dir == Direction::Received),
-                                |(_, idx)| &idx.0,
-                            );
-                        uncovered_query_idx.recv = Idx(recv_uncovered);
-
-                        let dir_idxs = sent_dir_idxs
-                            .into_iter()
-                            .chain(recv_dir_idxs)
-                            .collect::<Vec<_>>();
-
-                        // Skip proof generation if there are no committed ranges that can cover the
-                        // query ranges.
-                        if !dir_idxs.is_empty() {
-                            transcript_proof.encoding_proof = Some(
-                                encoding_tree
-                                    .proof(self.transcript, dir_idxs.into_iter())
-                                    .expect("subsequences were checked to be in tree"),
-                            );
-                        }
-                    }
-                    kind => {
-                        return Err(TranscriptProofBuilderError::new(
-                            BuilderErrorKind::NotSupported,
-                            format!("opening {kind} transcript commitments is not yet supported"),
-                        ));
-                    }
+                // If there are indices, generate a proof
+                if !dir_idxs.is_empty() {
+                    transcript_proof.encoding_proof = Some(
+                        encoding_tree
+                            .proof(self.transcript, dir_idxs.into_iter())
+                            .expect("tree should contain all its indices"),
+                    );
                 }
-            } else {
-                // Stops the set cover check if there are no more commitment kinds left.
-                break;
             }
-        }
-
-        // If there are still uncovered ranges, it means that query ranges cannot be
-        // covered by committed ranges of any kind.
-        if !uncovered_query_idx.is_empty() {
-            return Err(TranscriptProofBuilderError::cover(
-                uncovered_query_idx,
-                &self.commitment_kinds,
-            ));
         }
 
         Ok(transcript_proof)

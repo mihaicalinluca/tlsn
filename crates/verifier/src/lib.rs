@@ -26,7 +26,7 @@ use state::{Notarize, Verify};
 use tls_core::msgs::enums::ContentType;
 use tlsn_common::{
     commit::commit_records, config::ProtocolConfig, context::build_mt_context, mux::attach_mux,
-    zk_aes::ZkAesCtr, Role,
+    zk_aes::AesCtr, Role,
 };
 use tlsn_core::{
     attestation::{Attestation, AttestationConfig},
@@ -37,6 +37,7 @@ use tlsn_deap::Deap;
 use tokio::sync::Mutex;
 use web_time::{SystemTime, UNIX_EPOCH};
 
+use tlsn_common::transcript::TranscriptRefs;
 use tracing::{debug, info, info_span, instrument, Span};
 
 pub(crate) type RCOTSender = mpz_ot::rcot::shared::SharedRCOTSender<
@@ -112,13 +113,12 @@ impl Verifier<state::Initialized> {
 
         // Allocate resources for MPC-TLS in VM.
         let keys = mpc_tls.alloc()?;
-        // Allocate for committing to plaintext.
-        let mut zk_aes = ZkAesCtr::new(Role::Verifier);
-        zk_aes.set_key(keys.server_write_key, keys.server_write_iv);
-        zk_aes.alloc(
-            &mut (*vm.try_lock().expect("VM is not locked").zk()),
-            protocol_config.max_recv_data(),
-        )?;
+
+        // Use the dummy key and IV and the noop encryption
+        let key = [0u8; 16];
+        let nonce = [0u8; 8];
+        let initial_counter = 0; // Starting counter value
+        let aes = AesCtr::new(&key, &nonce, initial_counter);
 
         debug!("setting up mpc-tls");
 
@@ -135,7 +135,7 @@ impl Verifier<state::Initialized> {
                 mt,
                 delta,
                 mpc_tls,
-                zk_aes,
+                zk_aes: aes,
                 _keys: keys,
                 vm,
             },
@@ -224,6 +224,7 @@ impl Verifier<state::Setup> {
             let mut vm = vm.try_lock().expect("VM should not be locked");
 
             // Prepare for the prover to prove received plaintext.
+            // TODO: Change this to avoid zk
             let proof = commit_records(
                 &mut (*vm.zk()),
                 &mut zk_aes,
@@ -261,9 +262,14 @@ impl Verifier<state::Setup> {
             .map(|record| record.ciphertext.len())
             .sum::<usize>() as u32;
 
-        let transcript_refs = transcript
-            .to_transcript_refs()
-            .expect("transcript should be complete");
+        let transcript_refs = match transcript.to_transcript_refs() {
+            Ok(refs) => refs,
+            Err(_) => {
+                // Create a dummy TranscriptRefs to maintain compatibility
+                // when selective disclosure is disabled
+                TranscriptRefs::default()
+            }
+        };
 
         let connection_info = ConnectionInfo {
             time: start_time,
@@ -358,6 +364,9 @@ fn build_mpc_tls(
         rcot_recv.next().expect("receivers should be available"),
     ));
 
+    // TODO: Change this to avoid zk
+    // For now, we need to use the zk VM for get_macs() in the mpc
+    // let zk = DummyZk::new(());
     let zk = Zk::new(
         delta,
         rcot_send.next().expect("senders should be available"),

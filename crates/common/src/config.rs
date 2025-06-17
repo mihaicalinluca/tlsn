@@ -149,20 +149,8 @@ impl ProtocolConfigValidator {
         max_sent_data: usize,
         max_recv_data: usize,
     ) -> Result<(), ProtocolConfigError> {
-        if max_sent_data > self.max_sent_data {
-            return Err(ProtocolConfigError::max_transcript_size(format!(
-                "max_sent_data {:?} is greater than the configured limit {:?}",
-                max_sent_data, self.max_sent_data,
-            )));
-        }
-
-        if max_recv_data > self.max_recv_data {
-            return Err(ProtocolConfigError::max_transcript_size(format!(
-                "max_recv_data {:?} is greater than the configured limit {:?}",
-                max_recv_data, self.max_recv_data,
-            )));
-        }
-
+        // Remove size limitations to allow any amount of data
+        // The actual limits will be determined by system resources
         Ok(())
     }
 

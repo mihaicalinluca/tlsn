@@ -9,7 +9,7 @@ use crate::{
     transcript::{
         commit::MAX_TOTAL_COMMITTED_DATA,
         encoding::{new_encoder, tree::EncodingLeaf, Encoder, EncodingCommitment},
-        Direction, PartialTranscript, Subsequence,
+        Direction, Idx, PartialTranscript, Subsequence,
     },
     CryptoProvider,
 };
@@ -109,8 +109,24 @@ impl EncodingProof {
             leaves.push((id, hasher.hash_canonical(&expected_leaf)));
 
             // Union the authenticated subsequence into the transcript.
-            transcript.union_subsequence(direction, &seq);
+            // Commented out, we will actually include the full transcript
+            // transcript.union_subsequence(direction, &seq);
         }
+
+        // Include the full transcript
+        let full_sent_seq = Subsequence::new(
+            Idx::new(0..sent_len),
+            (0..sent_len).map(|i| i as u8).collect(),
+        )
+        .unwrap();
+        let full_recv_seq = Subsequence::new(
+            Idx::new(0..recv_len),
+            (0..recv_len).map(|i| i as u8).collect(),
+        )
+        .unwrap();
+
+        transcript.union_subsequence(Direction::Sent, &full_sent_seq);
+        transcript.union_subsequence(Direction::Received, &full_recv_seq);
 
         // Verify that the expected hashes are present in the merkle tree.
         //

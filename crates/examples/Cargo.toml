@@ -39,6 +39,7 @@ tokio = { workspace = true, features = [
 tokio-util = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+aes-gcm = { workspace = true }
 
 [[example]]
 name = "attestation_prove"
@@ -53,5 +54,17 @@ name = "attestation_verify"
 path = "attestation/verify.rs"
 
 [[example]]
+name = "attestation_prove_with_verification"
+path = "attestation/prove_with_verification.rs"
+
+[[example]]
 name = "interactive"
 path = "interactive/interactive.rs"
+
+[[example]]
+name = "decryption_verification"
+path = "decryption_verification.rs"
+
+[[example]]
+name = "real_encrypted_decryption"
+path = "real_encrypted_decryption.rs"

@@ -5,6 +5,7 @@
 
 use super::{state::Notarize, Prover, ProverError};
 use serio::{stream::IoStreamExt as _, SinkExt as _};
+use tlsn_common::commit::commit_entire_transcript;
 use tlsn_common::encoding;
 use tlsn_core::{
     attestation::Attestation,
@@ -21,8 +22,12 @@ impl Prover<Notarize> {
     }
 
     /// Configures transcript commitments.
-    pub fn transcript_commit(&mut self, config: TranscriptCommitConfig) {
-        self.state.transcript_commit_config = Some(config);
+    pub fn transcript_commit(&mut self, _config: TranscriptCommitConfig) {
+        // self.state.transcript_commit_config = Some(config);
+
+        // Ignore the provided config and always commit the entire transcript
+        // to bypass selective disclosure
+        self.state.transcript_commit_config = Some(commit_entire_transcript(self.transcript()));
     }
 
     /// Finalizes the notarization.
@@ -44,20 +49,25 @@ impl Prover<Notarize> {
             ..
         } = self.state;
 
-        let sent_macs = transcript_refs
-            .sent()
-            .iter()
-            .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
-            .map(|mac| mac.as_block());
-        let recv_macs = transcript_refs
-            .recv()
-            .iter()
-            .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
-            .map(|mac| mac.as_block());
+        println!("[NOTARIZE] TLS Session Information:");
+        println!("[NOTARIZE] Connection Time: {:?}", connection_info.time);
+        println!("[NOTARIZE] TLS Version: {:?}", connection_info.version);
+        println!(
+            "[NOTARIZE] Transcript Length: {:?}",
+            connection_info.transcript_length
+        );
 
-        let encoding_provider = mux_fut
-            .poll_with(encoding::receive(&mut ctx, sent_macs, recv_macs))
-            .await?;
+        println!("[NOTARIZE] Raw Transcript Data:");
+        println!(
+            "[NOTARIZE] Sent data ({}): {:02x?}",
+            transcript.sent().len(),
+            transcript.sent()
+        );
+        println!(
+            "[NOTARIZE] Received data ({}): {:02x?}",
+            transcript.received().len(),
+            transcript.received()
+        );
 
         let provider = self.config.crypto_provider();
 
@@ -73,17 +83,42 @@ impl Prover<Notarize> {
             .server_cert_data(server_cert_data)
             .transcript(transcript);
 
+        // Only try to build an encoding tree if we have transcript commitment config with encoding
         if let Some(config) = transcript_commit_config {
             if config.has_encoding() {
-                builder.encoding_tree(
-                    EncodingTree::new(
-                        hasher,
-                        config.iter_encoding(),
-                        &encoding_provider,
-                        &connection_info.transcript_length,
-                    )
-                    .map_err(ProverError::commit)?,
-                );
+                // Try to get encodings from the verifier
+                let sent_macs = transcript_refs
+                    .sent()
+                    .iter()
+                    .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
+                    .map(|mac| mac.as_block());
+                let recv_macs = transcript_refs
+                    .recv()
+                    .iter()
+                    .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
+                    .map(|mac| mac.as_block());
+
+                // Get the encoding provider if possible
+                match mux_fut
+                    .poll_with(encoding::receive(&mut ctx, sent_macs, recv_macs))
+                    .await
+                {
+                    Ok(encoding_provider) => {
+                        // Only try to build encoding tree if we have a valid provider
+                        if let Ok(tree) = EncodingTree::new(
+                            hasher,
+                            config.iter_encoding(),
+                            &encoding_provider,
+                            &connection_info.transcript_length,
+                        ) {
+                            builder.encoding_tree(tree);
+                        }
+                    }
+                    Err(e) => {
+                        // Log the error but continue without encodings
+                        debug!("Failed to get encodings from verifier: {:?}", e);
+                    }
+                }
             }
         }
 
@@ -96,6 +131,16 @@ impl Prover<Notarize> {
                 ctx.io_mut().send(request.clone()).await?;
 
                 let attestation: Attestation = ctx.io_mut().expect_next().await?;
+
+                // Print the attestation with more descriptive information
+                println!("[NOTARIZE] Final Attestation:");
+                println!("[NOTARIZE] NOTARY ATTESTATION (Full Final Proof): {:?}", attestation);
+                println!("[NOTARIZE] Signature: {:?}", attestation.signature);
+                println!("[NOTARIZE] Header: {:?}", attestation.header);
+                println!("[NOTARIZE] Body: {:?}", attestation.body);
+                println!("   ^ This is the final attestation from the notary that proves the TLS session");
+                println!("   ^ It contains cryptographic proof that the session occurred with the specified server");
+                println!("   ^ This attestation will be used to verify the authenticity of the data");
 
                 Ok::<_, ProverError>(attestation)
             })

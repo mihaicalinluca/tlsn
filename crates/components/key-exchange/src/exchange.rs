@@ -305,6 +305,19 @@ where
             .server_key
             .ok_or_else(|| KeyExchangeError::role("server key is not set"))?;
 
+        // Role to actual entity for clearer logging
+        let entity_name = match self.role {
+            Role::Leader => "PROVER",
+            Role::Follower => "NOTARY",
+        };
+
+        println!("[KEY EXCHANGE] Computing key shares for {}", entity_name);
+        println!(
+            "[KEY EXCHANGE] {} private key: {:?}",
+            entity_name, self.private_key
+        );
+        println!("[KEY EXCHANGE] Server public key: {:?}", server_key);
+
         let (pms_0, pms_1) = compute_ec_shares(
             ctx,
             self.role,
@@ -314,6 +327,18 @@ where
             server_key,
         )
         .await?;
+
+        println!("[KEY EXCHANGE] Generated PMS shares for {}:", entity_name);
+        println!(
+            "[KEY EXCHANGE] {} PMS share 0: {:02x?}",
+            entity_name,
+            pms_0.to_be_bytes()
+        );
+        println!(
+            "[KEY EXCHANGE] {} PMS share 1: {:02x?}",
+            entity_name,
+            pms_1.to_be_bytes()
+        );
 
         self.state = State::ComputedECShares {
             share_a0,
@@ -354,6 +379,25 @@ where
             .to_be_bytes()
             .try_into()
             .expect("pms share is 32 bytes");
+
+        // Role to actual entity for clearer logging
+        let entity_name = match self.role {
+            Role::Leader => "PROVER",
+            Role::Follower => "NOTARY",
+        };
+
+        println!(
+            "[KEY EXCHANGE] Assigning key shares to VM for {}",
+            entity_name
+        );
+        println!(
+            "[KEY EXCHANGE] {} Share 0: {:02x?}",
+            entity_name, share_0_bytes
+        );
+        println!(
+            "[KEY EXCHANGE] {} Share 1: {:02x?}",
+            entity_name, share_1_bytes
+        );
 
         match self.role {
             Role::Leader => {
