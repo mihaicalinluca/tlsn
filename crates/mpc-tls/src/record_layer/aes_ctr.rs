@@ -168,6 +168,22 @@ impl AesCtr {
                 *iv ^= otp;
             });
 
+            // LOG THE ACTUAL DECRYPTED KEYS FOR VERIFICATION
+            println!();
+            println!("AES-CTR KEY DERIVATION COMPLETE FOR LEADER (PROVER)");
+            println!("================================================");
+            println!(
+                "Server write key (for decrypting server data): {:02x?}",
+                key
+            );
+            println!("Server IV (initial value): {:02x?}", iv);
+            println!("Key format: AES-128 (16 bytes)");
+            println!("IV format: GCM initial value (4 bytes)");
+            println!("These keys can be used to manually decrypt TLS records");
+            println!("For GCM mode: nonce = server_iv (4 bytes) + explicit_nonce (8 bytes)");
+            println!("================================================");
+            println!();
+
             (Some(key), Some(iv))
         } else {
             (None, None)

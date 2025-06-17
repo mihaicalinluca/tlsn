@@ -38,17 +38,25 @@ pub fn commit_records<'record>(
 /// This bypasses selective disclosure by including everything
 pub fn commit_entire_transcript(transcript: &Transcript) -> TranscriptCommitConfig {
     // Print the actual transcript data with more descriptive information
-    println!("[PROVER COMMIT] OUTGOING TLS DATA (Client to Server): {:02x?}", transcript.sent());
+    println!(
+        "[PROVER COMMIT] OUTGOING TLS DATA (Client to Server): {:02x?}",
+        transcript.sent()
+    );
     println!("   ^ This is the data sent FROM the client TO the server during the TLS session");
     println!("   ^ Size: {} bytes", transcript.sent().len());
-    
-    println!("[PROVER COMMIT] INCOMING TLS DATA (Server to Client): {:02x?}", transcript.received());
+
+    println!(
+        "[PROVER COMMIT] INCOMING TLS DATA (Server to Client): {:02x?}",
+        transcript.received()
+    );
     println!("   ^ This is the data received BY the client FROM the server during the TLS session");
     println!("   ^ Size: {} bytes", transcript.received().len());
     println!("   ^ This contains the HTTP response we're proving");
-    
-    println!("[PROVER COMMIT] Creating commitment for entire transcript without selective disclosure");
-    
+
+    println!(
+        "[PROVER COMMIT] Creating commitment for entire transcript without selective disclosure"
+    );
+
     let mut builder = TranscriptCommitConfigBuilder::new(transcript);
 
     // Commit the entire sent data

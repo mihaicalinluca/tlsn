@@ -37,8 +37,8 @@ use tlsn_deap::Deap;
 use tokio::sync::Mutex;
 use web_time::{SystemTime, UNIX_EPOCH};
 
-use tracing::{debug, info, info_span, instrument, Span};
 use tlsn_common::transcript::TranscriptRefs;
+use tracing::{debug, info, info_span, instrument, Span};
 
 pub(crate) type RCOTSender = mpz_ot::rcot::shared::SharedRCOTSender<
     mpz_ot::ferret::Sender<mpz_ot::kos::Sender<mpz_ot::chou_orlandi::Receiver>>,

@@ -52,11 +52,22 @@ impl Prover<Notarize> {
         println!("[NOTARIZE] TLS Session Information:");
         println!("[NOTARIZE] Connection Time: {:?}", connection_info.time);
         println!("[NOTARIZE] TLS Version: {:?}", connection_info.version);
-        println!("[NOTARIZE] Transcript Length: {:?}", connection_info.transcript_length);
-        
+        println!(
+            "[NOTARIZE] Transcript Length: {:?}",
+            connection_info.transcript_length
+        );
+
         println!("[NOTARIZE] Raw Transcript Data:");
-        println!("[NOTARIZE] Sent data ({}): {:02x?}", transcript.sent().len(), transcript.sent());
-        println!("[NOTARIZE] Received data ({}): {:02x?}", transcript.received().len(), transcript.received());
+        println!(
+            "[NOTARIZE] Sent data ({}): {:02x?}",
+            transcript.sent().len(),
+            transcript.sent()
+        );
+        println!(
+            "[NOTARIZE] Received data ({}): {:02x?}",
+            transcript.received().len(),
+            transcript.received()
+        );
 
         let provider = self.config.crypto_provider();
 
@@ -120,7 +131,7 @@ impl Prover<Notarize> {
                 ctx.io_mut().send(request.clone()).await?;
 
                 let attestation: Attestation = ctx.io_mut().expect_next().await?;
-                
+
                 // Print the attestation with more descriptive information
                 println!("[NOTARIZE] Final Attestation:");
                 println!("[NOTARIZE] NOTARY ATTESTATION (Full Final Proof): {:?}", attestation);

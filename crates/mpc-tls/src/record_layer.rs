@@ -231,18 +231,33 @@ impl RecordLayer {
             .decrypt
             .try_lock()
             .map_err(|_| MpcTlsError::other("decrypt lock is held"))?;
-            
+
         // Role to actual entity for clearer logging
         let entity_name = match self.role {
             Role::Leader => "PROVER",
             Role::Follower => "NOTARY",
         };
-            
-        println!("[RECORD LAYER] Setting TLS record layer keys for {}", entity_name);
-        println!("[RECORD LAYER] {} Client write key: {:02x?}", entity_name, client_write_key);
-        println!("[RECORD LAYER] {} Client IV: {:02x?}", entity_name, client_iv);
-        println!("[RECORD LAYER] {} Server write key: {:02x?}", entity_name, server_write_key);
-        println!("[RECORD LAYER] {} Server IV: {:02x?}", entity_name, server_iv);
+
+        println!(
+            "[RECORD LAYER] Setting TLS record layer keys for {}",
+            entity_name
+        );
+        println!(
+            "[RECORD LAYER] {} Client write key: {:02x?}",
+            entity_name, client_write_key
+        );
+        println!(
+            "[RECORD LAYER] {} Client IV: {:02x?}",
+            entity_name, client_iv
+        );
+        println!(
+            "[RECORD LAYER] {} Server write key: {:02x?}",
+            entity_name, server_write_key
+        );
+        println!(
+            "[RECORD LAYER] {} Server IV: {:02x?}",
+            entity_name, server_iv
+        );
 
         encrypt.set_key(client_write_key);
         encrypt.set_iv(client_iv);
@@ -346,12 +361,30 @@ impl RecordLayer {
         }
 
         if typ == ContentType::ApplicationData {
-            println!("[PROVER RECORD LAYER] TLS ENCRYPTED DATA FROM SERVER (Application Data): {:02x?}", ciphertext);
+            println!(
+                "[PROVER RECORD LAYER] TLS ENCRYPTED DATA FROM SERVER (Application Data): {:02x?}",
+                ciphertext
+            );
             println!("   ^ This is the encrypted HTTP data as received from the server before decryption");
-            println!("   ^ Content Type: {:?}, Version: {:?}, Mode: {:?}", typ, version, mode);
+            println!(
+                "   ^ Content Type: {:?}, Version: {:?}, Mode: {:?}",
+                typ, version, mode
+            );
         }
 
         let (seq, aad) = self.next_read(typ, version, ciphertext.len());
+
+        println!("[TLS RECORD] Complete TLS Record Details:");
+        println!("  Content Type: {:?} ({})", typ, typ.get_u8());
+        println!("  TLS Version: {:?} ({:04x})", version, version.get_u16());
+        println!("  Sequence Number: {}", self.read_seq);
+        println!("  Explicit Nonce: {:02x?}", explicit_nonce);
+        println!("  Ciphertext Length: {}", ciphertext.len());
+        println!("  Ciphertext: {:02x?}", ciphertext);
+        println!("  Auth Tag Length: {}", tag.len());
+        println!("  Auth Tag: {:02x?}", tag);
+        println!("  Constructed AAD: {:02x?}", aad);
+
         self.recv += ciphertext.len();
         self.decrypt_buffer.push(DecryptOp::new(
             seq,
@@ -524,16 +557,22 @@ impl RecordLayer {
 
             // Print the actual decrypted data with more descriptive information
             if op.typ == ContentType::ApplicationData && plaintext.is_some() {
-                println!("[PROVER RECORD LAYER] DECRYPTED HTTP DATA (Application Data): {:02x?}", plaintext);
+                println!(
+                    "[PROVER RECORD LAYER] DECRYPTED HTTP DATA (Application Data): {:02x?}",
+                    plaintext
+                );
                 println!("   ^ This is the plaintext HTTP data after TLS decryption");
                 println!("   ^ Content Type: {:?}, Sequence: {}", op.typ, op.seq);
-                
+
                 // Try to show a basic text preview if it seems like HTTP
                 if let Some(data) = plaintext.as_ref() {
                     if !data.is_empty() {
                         if let Ok(text) = std::str::from_utf8(data) {
                             if text.starts_with("HTTP/") || text.contains("HTTP/") {
-                                println!("   ^ HTTP Response Preview: {}", text.lines().next().unwrap_or(""));
+                                println!(
+                                    "   ^ HTTP Response Preview: {}",
+                                    text.lines().next().unwrap_or("")
+                                );
                             }
                         }
                     }
@@ -634,6 +673,33 @@ impl RecordLayer {
         }
 
         self.state = State::Complete;
+
+        println!("[TLS TRANSCRIPT] Complete Session Transcript:");
+        println!("=== SENT RECORDS ===");
+        for (i, record) in sent_records.iter().enumerate() {
+            println!("Record {}: seq={}, type={:?}, nonce={:02x?}, ciphertext_len={}, plaintext_len={:?}", 
+            i, record.seq, record.typ, record.explicit_nonce, record.ciphertext.len(), record.plaintext.as_ref().map(|p| p.len()));
+
+            if record.typ == ContentType::ApplicationData {
+                println!("  Ciphertext: {:02x?}", record.ciphertext);
+                if let Some(ref plaintext) = record.plaintext {
+                    println!("  Plaintext: {:02x?}", plaintext);
+                }
+            }
+        }
+
+        println!("=== RECEIVED RECORDS ===");
+        for (i, record) in recv_records.iter().enumerate() {
+            println!("Record {}: seq={}, type={:?}, nonce={:02x?}, ciphertext_len={}, plaintext_len={:?}", 
+            i, record.seq, record.typ, record.explicit_nonce, record.ciphertext.len(), record.plaintext.as_ref().map(|p| p.len()));
+
+            if record.typ == ContentType::ApplicationData {
+                println!("  Ciphertext: {:02x?}", record.ciphertext);
+                if let Some(ref plaintext) = record.plaintext {
+                    println!("  Plaintext: {:02x?}", plaintext);
+                }
+            }
+        }
 
         Ok(TlsTranscript {
             sent: sent_records,

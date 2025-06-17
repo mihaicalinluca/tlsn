@@ -82,15 +82,15 @@ impl Execute for DummyZk {
 
 impl View<Binary> for DummyZk {
     type Error = VmError;
-    
+
     fn mark_public_raw(&mut self, slice: Slice) -> Result<(), Self::Error> {
         Ok(())
     }
-    
+
     fn mark_private_raw(&mut self, slice: Slice) -> Result<(), Self::Error> {
         Ok(())
     }
-    
+
     fn mark_blind_raw(&mut self, slice: Slice) -> Result<(), Self::Error> {
         Ok(())
     }

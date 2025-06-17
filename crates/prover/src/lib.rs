@@ -244,7 +244,7 @@ impl Prover<state::Setup> {
                         Transcript::new(Vec::new(), Vec::new())
                     }
                 };
-                
+
                 let transcript_refs = match data.transcript.to_transcript_refs() {
                     Ok(refs) => refs,
                     Err(_) => {
