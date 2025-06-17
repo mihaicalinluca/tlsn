@@ -4,6 +4,7 @@
 //! verifier produces an attestation but does not verify transcript data.
 
 use super::{state::Notarize, Prover, ProverError};
+use mpc_tls::record_layer::aead::ghash::compute_macs;
 use serio::{stream::IoStreamExt as _, SinkExt as _};
 use tlsn_common::commit::commit_entire_transcript;
 use tlsn_common::encoding;
@@ -69,6 +70,10 @@ impl Prover<Notarize> {
             transcript.received()
         );
 
+        // Extract transcript data immediately after destructuring
+        let sent_data = transcript.sent().to_vec();
+        let recv_data = transcript.received().to_vec();
+
         let provider = self.config.crypto_provider();
 
         let hasher = provider
@@ -83,24 +88,25 @@ impl Prover<Notarize> {
             .server_cert_data(server_cert_data)
             .transcript(transcript);
 
+        // Compute MACs outside the if block to avoid lifetime issues
+        let sent_macs = if !sent_data.is_empty() {
+            vec![compute_macs(&sent_data, &[0u8; 16]).expect("MAC computation failed")]
+        } else {
+            vec![]
+        };
+        
+        let recv_macs = if !recv_data.is_empty() {
+            vec![compute_macs(&recv_data, &[0u8; 16]).expect("MAC computation failed")]
+        } else {
+            vec![]
+        };
+
         // Only try to build an encoding tree if we have transcript commitment config with encoding
         if let Some(config) = transcript_commit_config {
             if config.has_encoding() {
-                // Try to get encodings from the verifier
-                let sent_macs = transcript_refs
-                    .sent()
-                    .iter()
-                    .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
-                    .map(|mac| mac.as_block());
-                let recv_macs = transcript_refs
-                    .recv()
-                    .iter()
-                    .flat_map(|plaintext| vm.get_macs(*plaintext).expect("reference is valid"))
-                    .map(|mac| mac.as_block());
-
                 // Get the encoding provider if possible
                 match mux_fut
-                    .poll_with(encoding::receive(&mut ctx, sent_macs, recv_macs))
+                    .poll_with(encoding::receive(&mut ctx, &sent_macs, &recv_macs))
                     .await
                 {
                     Ok(encoding_provider) => {

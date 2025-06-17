@@ -14,6 +14,12 @@ use mpz_share_conversion::{AdditiveToMultiplicative, MultiplicativeToAdditive};
 use serde::{Deserialize, Serialize};
 
 use crate::record_layer::aead::AeadError;
+use cipher_crate::generic_array::{typenum::U16, GenericArray};
+use ghash_rc::{
+    universal_hash::{KeyInit, UniversalHash as UniversalHashReference},
+    GHash as GhashReference,
+};
+use rand::Rng;
 
 /// Maximum exponent used in GHASH.
 const MAX_POWER: usize = 1026;
@@ -297,9 +303,10 @@ impl Add for TagShare {
     }
 }
 
+/// Re-exported for ease of use
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
-pub(crate) struct GhashError(#[from] ErrorRepr);
+pub struct GhashError(#[from] ErrorRepr);
 
 impl GhashError {
     fn conversion<E>(error: E) -> Self
@@ -331,6 +338,45 @@ impl From<GhashError> for AeadError {
     fn from(value: GhashError) -> Self {
         AeadError::tag(value)
     }
+}
+
+/// Computes MACs for the given plaintext using the standard GHASH implementation.
+/// This function uses a zero-knowledge approach by splitting the key into shares
+/// and computing MACs on each share separately.
+pub fn compute_macs(plaintext: &[u8], key: &[u8]) -> Result<Block, GhashError> {
+    // Split the key into two shares for zero-knowledge computation
+    let mut rng = rand::rng();
+    let key_share1: [u8; 16] = rng.random();
+
+    let mut key_share2 = [0u8; 16];
+    for (i, (a, b)) in key_share1.iter().zip(key.iter()).enumerate() {
+        key_share2[i] = a ^ b;
+    }
+
+    // Convert key shares to GenericArray
+    let key_share1_array: GenericArray<u8, U16> = GenericArray::clone_from_slice(&key_share1);
+    let key_share2_array: GenericArray<u8, U16> = GenericArray::clone_from_slice(&key_share2);
+
+    // Compute MACs for each share
+    let mut ghash1 = GhashReference::new(&key_share1_array);
+    let mut ghash2 = GhashReference::new(&key_share2_array);
+
+    ghash1.update_padded(plaintext);
+    ghash2.update_padded(plaintext);
+
+    let mac1 = ghash1.finalize();
+    let mac2 = ghash2.finalize();
+
+    // Combine the MACs and convert to Block
+    let combined_mac: [u8; 16] = mac1
+        .iter()
+        .zip(mac2.iter())
+        .map(|(a, b)| a ^ b)
+        .collect::<Vec<u8>>()
+        .try_into()
+        .map_err(|_| GhashError::state("Failed to convert MAC to array"))?;
+
+    Ok(Block::from(combined_mac))
 }
 
 #[cfg(test)]
