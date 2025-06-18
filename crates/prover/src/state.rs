@@ -65,6 +65,7 @@ pub struct Notarize {
     pub(crate) transcript: Transcript,
     pub(crate) transcript_refs: TranscriptRefs,
     pub(crate) transcript_commit_config: Option<TranscriptCommitConfig>,
+    pub(crate) keys: SessionKeys,
 }
 
 opaque_debug::implement!(Notarize);
@@ -82,6 +83,7 @@ impl From<Closed> for Notarize {
             transcript: state.transcript,
             transcript_refs: state.transcript_refs,
             transcript_commit_config: None,
+            keys: state._keys,
         }
     }
 }
