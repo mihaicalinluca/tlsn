@@ -39,6 +39,8 @@ impl Verifier<Notarize> {
 
         let attestation = mux_fut
             .poll_with(async {
+                // TODO: Modify this to use the single secure transcript MAC approach
+                // This prevents the MAC count mismatch error on the prover side
                 let sent_keys = transcript_refs
                     .sent()
                     .iter()
