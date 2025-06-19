@@ -1,5 +1,7 @@
 mod aes_gcm;
-mod ghash;
+
+/// GHASH module.
+pub mod ghash;
 
 pub(crate) use aes_gcm::MpcAesGcm;
 use cipher::{aes::AesError, CipherError};

@@ -10,7 +10,7 @@ mod error;
 pub(crate) mod follower;
 pub(crate) mod leader;
 mod msg;
-mod record_layer;
+pub mod record_layer;
 pub(crate) mod utils;
 
 pub use config::{Config, ConfigBuilder, ConfigBuilderError};

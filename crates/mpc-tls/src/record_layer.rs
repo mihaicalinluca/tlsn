@@ -1,6 +1,7 @@
 //! TLS record layer.
 
-pub(crate) mod aead;
+/// AEAD module.
+pub mod aead;
 mod aes_ctr;
 mod decrypt;
 mod encrypt;
