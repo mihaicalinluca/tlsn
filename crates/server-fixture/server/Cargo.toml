@@ -16,6 +16,7 @@ tokio-util = { workspace = true, features = ["compat", "io"] }
 tower-service = { version = "0.3" }
 serde_json = { workspace = true }
 tlsn-server-fixture-certs = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }
 
 [[bin]]
 name = "tlsn-server-fixture"
