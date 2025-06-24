@@ -33,6 +33,11 @@ use tlsn_server_fixture_certs::*;
 
 pub const DEFAULT_FIXTURE_PORT: u16 = 3000;
 
+/// Get the custom API URL from environment
+fn get_custom_api_url() -> Option<String> {
+    std::env::var("CUSTOM_API_URL").ok()
+}
+
 struct AppState {
     shutdown: Option<oneshot::Sender<()>>,
 }
@@ -101,6 +106,52 @@ async fn bytes(
     Ok(Bytes::from(vec![0x42u8; size]))
 }
 
+/// Fetch JSON data from the custom API endpoint
+async fn fetch_from_custom_api(url: &str) -> Result<Json<Value>, StatusCode> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| {
+            eprintln!("Failed to create HTTP client: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    println!("Making request to: {:#?}", url);
+
+    match client.get(url).send().await {
+        Ok(response) => {
+            let status = response.status();
+            println!("Received response with status: {}", status);
+
+            if status.is_success() {
+                match response.json::<Value>().await {
+                    Ok(json_value) => {
+                        println!(
+                            "Successfully parsed JSON from custom API {:?}",
+                            Json(json_value.clone())
+                        );
+                        Ok(Json(json_value))
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to parse JSON from custom API: {}", e);
+                        println!("Falling back to static data due to JSON parse error");
+                        get_json_value(include_str!("data/1kb.json"))
+                    }
+                }
+            } else {
+                eprintln!("Custom API returned error status: {}", status);
+                println!("Falling back to static data due to API error status");
+                get_json_value(include_str!("data/1kb.json"))
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to fetch from custom API: {}", e);
+            println!("Falling back to static data due to network error");
+            get_json_value(include_str!("data/1kb.json"))
+        }
+    }
+}
+
 /// parse the JSON data from the file content
 fn get_json_value(filecontent: &str) -> Result<Json<Value>, StatusCode> {
     Ok(Json(serde_json::from_str(filecontent).map_err(|e| {
@@ -113,20 +164,27 @@ async fn json(
     State(state): State<Arc<Mutex<AppState>>>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Value>, StatusCode> {
-    let size = params
-        .get("size")
-        .and_then(|size| size.parse::<usize>().ok())
-        .unwrap_or(1);
-
     if params.contains_key("shutdown") {
         _ = state.lock().unwrap().shutdown.take().unwrap().send(());
     }
 
-    match size {
-        1 => get_json_value(include_str!("data/1kb.json")),
-        4 => get_json_value(include_str!("data/4kb.json")),
-        8 => get_json_value(include_str!("data/8kb.json")),
-        _ => Err(StatusCode::NOT_FOUND),
+    if let Some(url) = get_custom_api_url() {
+        println!("Fetching data from custom API: {}", &url);
+        fetch_from_custom_api(&url).await
+    } else {
+        // Use original static data logic for backward compatibility
+        let size = params
+            .get("size")
+            .and_then(|size| size.parse::<usize>().ok())
+            .unwrap_or(1);
+
+        println!("Using static data with size: {}", size);
+        match size {
+            1 => get_json_value(include_str!("data/1kb.json")),
+            4 => get_json_value(include_str!("data/4kb.json")),
+            8 => get_json_value(include_str!("data/8kb.json")),
+            _ => Err(StatusCode::NOT_FOUND),
+        }
     }
 }
 
