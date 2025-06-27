@@ -3,8 +3,8 @@ use tls_core::verify::WebPkiVerifier;
 use tls_server_fixture::CA_CERT_DER;
 use tlsn_core::CryptoProvider;
 
-pub const MAX_SENT_DATA: usize = 20971520; // 20 MB (should be plenty for API requests)
-pub const MAX_RECV_DATA: usize = 20971520; // 20 MB (should handle large API responses)
+pub const MAX_SENT_DATA: usize = 65536; // 64 kb
+pub const MAX_RECV_DATA: usize = 262144; // 256 kb
 
 /// crypto provider accepting the server-fixture's self-signed certificate
 ///

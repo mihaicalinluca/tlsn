@@ -13,21 +13,10 @@ const PROTOCOL_RECORD_COUNT_SENT: usize = 2;
 const PROTOCOL_RECORD_COUNT_RECV: usize = 2;
 
 /// Computes the record count configuration given the data volume.
-///
-/// Accurately estimating a good default is challenging as we do not
-/// know exactly how much data will be packed into each record in advance.
+/// We only return 1 record containing the entire data buffer
+
 fn default_record_count(max_data: usize) -> usize {
-    // We assume a minimum of 8 records for the first 4KB.
-    const MIN: usize = 8;
-
-    // Then we estimate that after 4KB of data is transmitted that they will
-    // average 4KB in size.
-    let remainder = max_data.saturating_sub(4096);
-    let count = remainder.div_ceil(4096);
-
-    // For example, if max_data=32KB then this will return 15. That will result
-    // in about 3MB upload from prover to verifier.
-    MIN + count
+    1
 }
 
 /// MPC-TLS configuration.
