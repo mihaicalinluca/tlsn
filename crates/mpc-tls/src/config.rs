@@ -14,9 +14,18 @@ const PROTOCOL_RECORD_COUNT_RECV: usize = 2;
 
 /// Computes the record count configuration given the data volume.
 /// We only return 1 record containing the entire data buffer
-
 fn default_record_count(max_data: usize) -> usize {
     1
+}
+
+pub(crate) fn j0_block_count(data_len: usize) -> usize {
+    // TLS fragments plaintext into 16KB chunks, then encrypts each chunk
+    // Each encrypted record needs 1 J0 block regardless of size
+    let max_plaintext_fragment = 16384; // MAX_FRAGMENT_LEN
+    let record_count = (data_len + max_plaintext_fragment - 1) / max_plaintext_fragment;
+
+    // safety margin
+    record_count + 4
 }
 
 /// MPC-TLS configuration.

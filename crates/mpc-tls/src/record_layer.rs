@@ -26,6 +26,7 @@ use tokio::sync::Mutex;
 use tracing::{debug, instrument};
 
 use crate::{
+    config::j0_block_count,
     record_layer::{aes_ctr::AesCtr, decrypt::DecryptOp, encrypt::EncryptOp},
     MpcTlsError, Role, Vm,
 };
@@ -159,11 +160,11 @@ impl RecordLayer {
             .map_err(|_| MpcTlsError::other("decrypt lock is held"))?;
 
         encrypt
-            .alloc(vm, sent_records, sent_len)
+            .alloc(vm, j0_block_count(sent_len), sent_len)
             .map_err(MpcTlsError::record_layer)?;
 
         decrypt
-            .alloc(vm, recv_records, recv_len_online)
+            .alloc(vm, j0_block_count(recv_len), recv_len_online)
             .map_err(MpcTlsError::record_layer)?;
 
         let recv_otp = match self.role {
