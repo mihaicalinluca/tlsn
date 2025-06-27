@@ -60,7 +60,8 @@ pub(crate) type RCOTReceiver = mpz_ot::rcot::shared::SharedRCOTReceiver<
 >;
 pub(crate) type Mpc =
     mpz_garble::protocol::semihonest::Generator<mpz_ot::cot::DerandCOTSender<RCOTSender>>;
-pub(crate) type Zk = mpz_zk::Prover<RCOTReceiver>;
+
+pub(crate) type Zk = DummyZk;
 
 /// A prover instance.
 #[derive(Debug)]
@@ -216,7 +217,6 @@ impl Prover<state::Setup> {
 
                     // TODO: Change this to avoid zk
                     _ = commit_records(
-                        &mut (*vm.zk()),
                         &mut zk_aes,
                         data.transcript
                             .recv
@@ -389,13 +389,11 @@ fn build_mpc_tls(config: &ProverConfig, ctx: Context) -> (Arc<Mutex<Deap<Mpc, Zk
         delta,
     );
 
-    // TODO: Change this to avoid zk
-    // For now, we need to use the zk VM for get_macs() in the mpc
-    // let zk = DummyZk::new(());
-    let zk = Zk::new(rcot_recv.next().expect("enough receivers are available"));
+    let zk = DummyZk::new(());
 
     // actually keep this, but with dummyZK
-    let vm = Arc::new(Mutex::new(Deap::new(tlsn_deap::Role::Leader, mpc, zk)));
+    let vm: Arc<Mutex<Deap<_, DummyZk>>> =
+        Arc::new(Mutex::new(Deap::new(tlsn_deap::Role::Leader, mpc, zk)));
 
     (
         vm.clone(),

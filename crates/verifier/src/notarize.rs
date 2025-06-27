@@ -7,7 +7,6 @@ use super::{state::Notarize, Verifier, VerifierError};
 use rand::Rng;
 use serio::{stream::IoStreamExt, SinkExt as _};
 
-use tlsn_common::encoding;
 use tlsn_core::{
     attestation::{Attestation, AttestationConfig},
     request::Request,
@@ -39,19 +38,8 @@ impl Verifier<Notarize> {
 
         let attestation = mux_fut
             .poll_with(async {
-                let sent_keys = transcript_refs
-                    .sent()
-                    .iter()
-                    .flat_map(|plaintext| vm.get_keys(*plaintext).expect("reference is valid"))
-                    .map(|key| key.as_block());
-                let recv_keys = transcript_refs
-                    .recv()
-                    .iter()
-                    .flat_map(|plaintext| vm.get_keys(*plaintext).expect("reference is valid"))
-                    .map(|key| key.as_block());
-
-                // Convert encodings into a structured format.
-                encoding::transfer(&mut ctx, &encoder_secret, sent_keys, recv_keys).await?;
+                // Skip encoding transfer sincer selective disclosure is disabled
+                // encoding::transfer(&mut ctx, &encoder_secret, sent_keys, recv_keys).await?;
 
                 // Receive attestation request, which also contains commitments required before
                 // finalization.

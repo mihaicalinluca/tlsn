@@ -33,7 +33,7 @@ use tlsn_core::{
     connection::{ConnectionInfo, ServerName, TlsVersion, TranscriptLength},
     transcript::PartialTranscript,
 };
-use tlsn_deap::Deap;
+use tlsn_deap::{Deap, DummyZk};
 use tokio::sync::Mutex;
 use web_time::{SystemTime, UNIX_EPOCH};
 
@@ -51,7 +51,7 @@ pub(crate) type RCOTReceiver = mpz_ot::rcot::shared::SharedRCOTReceiver<
 >;
 pub(crate) type Mpc =
     mpz_garble::protocol::semihonest::Evaluator<mpz_ot::cot::DerandCOTReceiver<RCOTReceiver>>;
-pub(crate) type Zk = mpz_zk::Verifier<RCOTSender>;
+pub(crate) type Zk = DummyZk;
 
 /// Information about the TLS session.
 #[derive(Debug)]
@@ -226,7 +226,6 @@ impl Verifier<state::Setup> {
             // Prepare for the prover to prove received plaintext.
             // TODO: Change this to avoid zk
             let proof = commit_records(
-                &mut (*vm.zk()),
                 &mut zk_aes,
                 transcript
                     .recv
@@ -364,15 +363,10 @@ fn build_mpc_tls(
         rcot_recv.next().expect("receivers should be available"),
     ));
 
-    // TODO: Change this to avoid zk
-    // For now, we need to use the zk VM for get_macs() in the mpc
-    // let zk = DummyZk::new(());
-    let zk = Zk::new(
-        delta,
-        rcot_send.next().expect("senders should be available"),
-    );
+    let zk = DummyZk::new(());
 
-    let vm = Arc::new(Mutex::new(Deap::new(tlsn_deap::Role::Follower, mpc, zk)));
+    let vm: Arc<Mutex<Deap<_, DummyZk>>> =
+        Arc::new(Mutex::new(Deap::new(tlsn_deap::Role::Follower, mpc, zk)));
 
     (
         vm.clone(),

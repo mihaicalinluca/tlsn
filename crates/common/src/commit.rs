@@ -16,7 +16,6 @@ use crate::{
 ///
 /// Writes the plaintext VM reference to the provided records.
 pub fn commit_records<'record>(
-    vm: &mut dyn Vm<Binary>,
     aes: &mut AesCtr,
     records: impl IntoIterator<Item = &'record mut Record>,
 ) -> Result<RecordProof, RecordProofError> {
@@ -87,7 +86,7 @@ impl RecordProof {
     pub fn verify(self) -> Result<(), RecordProofError> {
         let Self { ciphertexts } = self;
 
-        for (mut ciphertext, expected) in ciphertexts {
+        for (ciphertext, expected) in ciphertexts {
             if ciphertext != expected {
                 return Err(ErrorRepr::InvalidCiphertext.into());
             }
