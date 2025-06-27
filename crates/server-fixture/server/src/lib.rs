@@ -168,15 +168,15 @@ async fn json(
         _ = state.lock().unwrap().shutdown.take().unwrap().send(());
     }
 
-    std::env::set_var(
-        "CUSTOM_API_URL",
-        "https://api.multiversx.com/blocks?size=10000",
-    );
-
     // std::env::set_var(
     //     "CUSTOM_API_URL",
-    //     "https://api.multiversx.com/stats",
+    //     "https://api.multiversx.com/blocks?size=10000",
     // );
+
+    std::env::set_var(
+        "CUSTOM_API_URL",
+        "https://api.multiversx.com/stats",
+    );
 
     if let Some(url) = get_custom_api_url() {
         println!("Fetching data from custom API: {}", &url);
