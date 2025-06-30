@@ -1,22 +1,17 @@
 //! Plaintext commitment and proof of encryption.
 
-use mpz_core::bitvec::BitVec;
-use mpz_memory_core::{binary::Binary, DecodeFutureTyped};
-use mpz_vm_core::{prelude::*, Vm};
+use mpz_memory_core::binary::Binary;
+use mpz_vm_core::Vm;
 use tlsn_core::transcript::{Transcript, TranscriptCommitConfig, TranscriptCommitConfigBuilder};
 
-use crate::{
-    transcript::Record,
-    zk_aes::{AesCtr, AesCtrError},
-    Role,
-};
+use crate::{transcript::Record, zk_aes::AesCtr};
 
 /// Commits the plaintext of the provided records, returning a proof of
 /// encryption.
 ///
 /// Writes the plaintext VM reference to the provided records.
 pub fn commit_records<'record>(
-    vm: &mut dyn Vm<Binary>,
+    _vm: &mut dyn Vm<Binary>,
     aes: &mut AesCtr,
     records: impl IntoIterator<Item = &'record mut Record>,
 ) -> Result<RecordProof, RecordProofError> {
@@ -110,28 +105,11 @@ impl RecordProof {
 #[error(transparent)]
 pub struct RecordProofError(#[from] ErrorRepr);
 
-impl RecordProofError {
-    fn vm<E>(err: E) -> Self
-    where
-        E: Into<Box<dyn std::error::Error + Send + Sync + 'static>>,
-    {
-        Self(ErrorRepr::Vm(err.into()))
-    }
-}
-
 #[derive(Debug, thiserror::Error)]
 #[error("record proof error: {0}")]
 enum ErrorRepr {
-    #[error("VM error: {0}")]
-    Vm(Box<dyn std::error::Error + Send + Sync + 'static>),
-    #[error("simple aes error: {0}")]
-    Aes(AesCtrError),
-    #[error("plaintext is missing")]
-    MissingPlaintext,
     #[error("plaintext reference is already set")]
     PlaintextRefAlreadySet,
-    #[error("ciphertext was not decoded")]
-    NotDecoded,
     #[error("ciphertext does not match expected")]
     InvalidCiphertext,
 }

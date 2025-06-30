@@ -126,7 +126,7 @@ async fn fetch_from_custom_api(url: &str) -> Result<Json<Value>, StatusCode> {
             if status.is_success() {
                 match response.json::<Value>().await {
                     Ok(json_value) => {
-                        if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+                        if std::env::var("VERBOSE").is_ok_and(|e| e == "true") {
                             println!(
                                 "Successfully parsed JSON from custom API {:?}",
                                 Json(json_value.clone())

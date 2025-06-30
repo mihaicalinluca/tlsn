@@ -29,13 +29,8 @@ use tls_client::{ClientConnection, ServerName as TlsServerName};
 use tls_client_async::{bind_client, TlsConnection};
 use tls_core::msgs::enums::ContentType;
 use tlsn_common::{
-    commit::{commit_records, RecordProof},
-    config::ProtocolConfig,
-    context::build_mt_context,
-    mux::attach_mux,
-    transcript::TranscriptRefs,
-    zk_aes::AesCtr,
-    Role,
+    commit::commit_records, context::build_mt_context, mux::attach_mux, transcript::TranscriptRefs,
+    zk_aes::AesCtr, Role,
 };
 use tlsn_core::{
     connection::{
@@ -44,7 +39,7 @@ use tlsn_core::{
     },
     transcript::Transcript,
 };
-use tlsn_deap::{Deap, DummyZk};
+use tlsn_deap::Deap;
 use tokio::sync::Mutex;
 
 use tracing::{debug, info_span, instrument, Instrument, Span};

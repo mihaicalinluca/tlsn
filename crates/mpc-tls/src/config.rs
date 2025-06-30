@@ -14,7 +14,7 @@ const PROTOCOL_RECORD_COUNT_RECV: usize = 2;
 
 /// Computes the record count configuration given the data volume.
 /// We only return 1 record containing the entire data buffer
-fn default_record_count(max_data: usize) -> usize {
+fn default_record_count(_max_data: usize) -> usize {
     1
 }
 

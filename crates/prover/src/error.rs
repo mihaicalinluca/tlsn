@@ -41,13 +41,6 @@ impl ProverError {
         Self::new(ErrorKind::Zk, source)
     }
 
-    pub(crate) fn commit<E>(source: E) -> Self
-    where
-        E: Into<Box<dyn Error + Send + Sync + 'static>>,
-    {
-        Self::new(ErrorKind::Commit, source)
-    }
-
     pub(crate) fn attestation<E>(source: E) -> Self
     where
         E: Into<Box<dyn Error + Send + Sync + 'static>>,
