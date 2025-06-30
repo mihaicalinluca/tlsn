@@ -171,7 +171,9 @@ async fn notarize(
     match body_content {
         tlsn_formats::http::BodyContent::Json(_json) => {
             let parsed = serde_json::from_str::<serde_json::Value>(&body)?;
-            debug!("{}", serde_json::to_string_pretty(&parsed)?);
+            if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+                debug!("{}", serde_json::to_string_pretty(&parsed)?);
+            }
         }
         tlsn_formats::http::BodyContent::Unknown(_span) => {
             debug!("{}", &body);

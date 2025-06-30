@@ -6,6 +6,14 @@
 # Cleanup background processes on script exit
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 
+VERBOSE=true
+
+if [ "$VERBOSE" = true ]; then
+    echo "Verbose mode is enabled"
+else
+    echo "Verbose mode is disabled"
+fi
+
 # Start the server-fixture with custom API
 echo "Starting server-fixture..."
 CUSTOM_API_URL="https://api.multiversx.com/stats" 

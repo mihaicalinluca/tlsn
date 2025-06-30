@@ -57,17 +57,21 @@ impl Prover<Notarize> {
             connection_info.transcript_length
         );
 
-        println!("[NOTARIZE] Raw Transcript Data:");
-        println!(
-            "[NOTARIZE] Sent data ({}): {:02x?}",
-            transcript.sent().len(),
-            transcript.sent()
-        );
-        println!(
-            "[NOTARIZE] Received data ({}): {:02x?}",
-            transcript.received().len(),
-            transcript.received()
-        );
+        if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+            println!("[NOTARIZE] Raw Transcript Data:");
+            println!(
+                "[NOTARIZE] Sent data ({}): {:02x?}",
+                transcript.sent().len(),
+                transcript.sent()
+            );
+            println!(
+                "[NOTARIZE] Received data ({}): {:02x?}",
+                transcript.received().len(),
+                transcript.received()
+            );
+        } else {
+            println!("[NOTARIZE] Raw Transcript Data (preview) - hidden");
+        }
 
         let provider = self.config.crypto_provider();
 
@@ -133,11 +137,16 @@ impl Prover<Notarize> {
                 let attestation: Attestation = ctx.io_mut().expect_next().await?;
 
                 // Print the attestation with more descriptive information
+                if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
                 println!("[NOTARIZE] Final Attestation:");
                 println!("[NOTARIZE] NOTARY ATTESTATION (Full Final Proof): {:?}", attestation);
                 println!("[NOTARIZE] Signature: {:?}", attestation.signature);
                 println!("[NOTARIZE] Header: {:?}", attestation.header);
                 println!("[NOTARIZE] Body: {:?}", attestation.body);
+                } else {
+                    println!("[NOTARIZE] Final Attestation (preview):");
+                    println!("[NOTARIZE] NOTARY ATTESTATION (Full Final Proof) PREVIEW: {:?}", attestation);
+                }
                 println!("   ^ This is the final attestation from the notary that proves the TLS session");
                 println!("   ^ It contains cryptographic proof that the session occurred with the specified server");
                 println!("   ^ This attestation will be used to verify the authenticity of the data");

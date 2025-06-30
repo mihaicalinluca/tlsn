@@ -38,17 +38,25 @@ pub fn commit_records<'record>(
 /// This bypasses selective disclosure by including everything
 pub fn commit_entire_transcript(transcript: &Transcript) -> TranscriptCommitConfig {
     // Print the actual transcript data with more descriptive information
-    println!(
-        "[PROVER COMMIT] OUTGOING TLS DATA (Client to Server): {:02x?}",
-        transcript.sent()
-    );
+    if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+        println!(
+            "[PROVER COMMIT] OUTGOING TLS DATA (Client to Server): {:02x?}",
+            transcript.sent()
+        );
+    } else {
+        println!("[PROVER COMMIT] OUTGOING TLS DATA (Client to Server) - hidden",);
+    }
     println!("   ^ This is the data sent FROM the client TO the server during the TLS session");
     println!("   ^ Size: {} bytes", transcript.sent().len());
 
-    println!(
-        "[PROVER COMMIT] INCOMING TLS DATA (Server to Client): {:02x?}",
-        transcript.received()
-    );
+    if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+        println!(
+            "[PROVER COMMIT] INCOMING TLS DATA (Server to Client): {:02x?}",
+            transcript.received()
+        );
+    } else {
+        println!("[PROVER COMMIT] INCOMING TLS DATA (Server to Client) - hidden",);
+    }
     println!("   ^ This is the data received BY the client FROM the server during the TLS session");
     println!("   ^ Size: {} bytes", transcript.received().len());
     println!("   ^ This contains the HTTP response we're proving");
@@ -87,7 +95,7 @@ impl RecordProof {
     pub fn verify(self) -> Result<(), RecordProofError> {
         let Self { ciphertexts } = self;
 
-        for (mut ciphertext, expected) in ciphertexts {
+        for (ciphertext, expected) in ciphertexts {
             if ciphertext != expected {
                 return Err(ErrorRepr::InvalidCiphertext.into());
             }
