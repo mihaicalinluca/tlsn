@@ -1,0 +1,27 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+name = "prover-service"
+
+[notary]
+host = "127.0.0.1"
+port = 7047
+tls_enabled = false
+timeout = 555555
+
+[session]
+max_sent_data = 65536
+max_recv_data = 20971520
+
+[target_server]
+# Default target, can be overridden in requests
+default_host = "https://api.multiversx.com/stats"
+default_port = 443
+
+[logging]
+level = "DEBUG"
+
+[storage]
+# Where to store attestations and secrets
+attestation_dir = "./attestations"
+secrets_dir = "./secrets" 
