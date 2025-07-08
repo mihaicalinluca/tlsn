@@ -112,7 +112,7 @@ pub struct SessionSummary {
 }
 
 /// In-memory session store
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SessionStore {
     sessions: Arc<RwLock<HashMap<String, Arc<Mutex<SessionInfo>>>>>,
 }
@@ -234,6 +234,36 @@ impl SessionStore {
         }
     }
 
+    /// Get attestation data for a session
+    pub async fn get_attestation(&self, session_id: &str) -> Result<Option<Vec<u8>>, String> {
+        if let Some(session) = self.get_session(session_id).await {
+            let session_info = session.lock().await;
+            Ok(session_info.attestation.clone())
+        } else {
+            Err(format!("Session {} not found", session_id))
+        }
+    }
+
+    /// Get secrets data for a session  
+    pub async fn get_secrets(&self, session_id: &str) -> Result<Option<Vec<u8>>, String> {
+        if let Some(session) = self.get_session(session_id).await {
+            let session_info = session.lock().await;
+            Ok(session_info.secrets.clone())
+        } else {
+            Err(format!("Session {} not found", session_id))
+        }
+    }
+
+    /// Remove a session from the store
+    pub async fn remove_session(&self, session_id: &str) -> Result<(), String> {
+        let mut sessions = self.sessions.write().await;
+        if sessions.remove(session_id).is_some() {
+            Ok(())
+        } else {
+            Err(format!("Session {} not found", session_id))
+        }
+    }
+
     /// List all sessions
     pub async fn list_sessions(&self) -> Vec<SessionSummary> {
         let sessions = self.sessions.read().await;
@@ -255,9 +285,9 @@ impl SessionStore {
         summaries
     }
 
-    /// Clean up old completed sessions (older than 24 hours)
+    /// Clean up old completed sessions (older than 1 hour)
     pub async fn cleanup_old_sessions(&self) {
-        let cutoff = Utc::now() - chrono::Duration::hours(24);
+        let cutoff = Utc::now() - chrono::Duration::hours(1);
         let mut sessions = self.sessions.write().await;
 
         sessions.retain(|_, session| {

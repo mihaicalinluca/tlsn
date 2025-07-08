@@ -84,6 +84,9 @@ pub async fn start_mpc_handler(
     }))
 }
 
+// Session cleanup is handled by the background cleanup task
+// Individual downloads have no immediate cleanup, ZIP download has immediate cleanup
+// This avoids race conditions and provides consistent behavior
 async fn perform_mpc_session(
     config: Arc<Config>,
     session_store: Arc<SessionStore>,

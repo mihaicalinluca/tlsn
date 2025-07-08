@@ -2,7 +2,7 @@
 name = "tlsn-prover-service"
 version = "0.1.0"
 edition = "2021"
-authors = ["TLSNotary Team"]
+authors = ["Mihai Calin Luca <calin.luca@multiversx.com>"]
 description = "HTTP service wrapper for TLSNotary prover functionality"
 
 [dependencies]
@@ -13,7 +13,7 @@ tlsn-examples = { path = "../../crates/examples" }
 tlsn-formats = { path = "../../crates/formats" }
 notary-client = { path = "../../crates/notary/client" }
 
-axum = { version = "0.7", features = ["json", "tokio"] }
+axum = "0.8"
 axum-macros = "0.4"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
@@ -26,21 +26,22 @@ bincode = "1.3"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 
-hyper = { version = "1.0", features = ["full"] }
-hyper-util = { version = "0.1", features = ["full"] }
+hyper = "1.0"
+hyper-util = "0.1"
 http-body-util = "0.1"
 
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = "0.3"
 eyre = "0.6"
 thiserror = "1.0"
 url = "2.5"
 base64 = "0.22"
+zip = "0.6"
 
 config = "0.14"
 
 tokio-util = { version = "0.7", features = ["compat"] }
 
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = "0.12"

@@ -19,6 +19,7 @@ use tracing::{info, warn};
 use config::Config;
 use handlers::{
     attestation::get_attestation,
+    download::{download_attestation, download_secrets, download_both},
     mpc::start_mpc_handler,
     status::{get_session_status, list_sessions},
 };
@@ -52,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let session_store_clone = Arc::clone(&session_store);
         tokio::spawn(async move {
-            let mut cleanup_interval = interval(Duration::from_secs(3600)); // Clean up every hour
+            let mut cleanup_interval = interval(Duration::from_secs(1800)); // Clean up every 30 minutes
             loop {
                 cleanup_interval.tick().await;
                 session_store_clone.cleanup_old_sessions().await;
@@ -75,7 +76,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("  POST /start_mpc - Start MPC session");
     info!("  GET  /status/:session_id - Get session status");
     info!("  GET  /sessions - List all sessions");
-    info!("  GET  /attestation/:session_id - Get attestation");
+    info!("  GET  /attestation/:session_id - Get attestation (JSON)");
+    info!("  GET  /download/attestation/:session_id - Download attestation file");
+    info!("  GET  /download/secrets/:session_id - Download secrets file");
+    info!("  GET  /download/both/:session_id - Download both files (ZIP with .tlsn files)");
     info!("  GET  /health - Health check");
     info!("  GET  /info - Service information");
 
@@ -87,9 +91,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn create_app(config: Arc<Config>, session_store: Arc<SessionStore>) -> Router {
     Router::new()
         .route("/start_mpc", post(start_mpc_handler))
-        .route("/status/:session_id", get(get_session_status))
+        .route("/status/{session_id}", get(get_session_status))
         .route("/sessions", get(list_sessions))
-        .route("/attestation/:session_id", get(get_attestation))
+        .route("/attestation/{session_id}", get(get_attestation))
+        .route("/download/attestation/{session_id}", get(download_attestation))
+        .route("/download/secrets/{session_id}", get(download_secrets))
+        .route("/download/both/{session_id}", get(download_both))
         .route("/health", get(health_check))
         .route("/info", get(service_info))
         .layer(CorsLayer::permissive())
