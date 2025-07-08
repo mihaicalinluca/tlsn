@@ -105,9 +105,20 @@ async fn perform_mpc_session(
         .await
         .map_err(|e| format!("Failed to update session status: {}", e))?;
 
-    let target_url = Url::parse(&request.target_api)?;
+    let target_url = if !request.target_api.is_empty() {
+        Url::parse(&request.target_api)?
+    } else {
+        info!("Using default target URL from config: {}", config.target_server.default_host);
+        Url::parse(&config.target_server.default_host)?
+    };
+
     let server_name = target_url.host_str().ok_or("Invalid target URL: no host")?;
-    let server_port = target_url.port().unwrap_or(443);
+    let server_port = target_url
+        .port()
+        .unwrap_or_else(|| {
+            info!("Using default port from config: {}", config.target_server.default_port);
+            config.target_server.default_port
+        });
 
     session_store
         .update_status(

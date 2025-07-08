@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 /// Main configuration for the prover service
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,7 +8,6 @@ pub struct Config {
     pub session: SessionConfig,
     pub target_server: TargetServerConfig,
     pub logging: LoggingConfig,
-    pub storage: StorageConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,12 +42,6 @@ pub struct LoggingConfig {
     pub level: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageConfig {
-    pub attestation_dir: PathBuf,
-    pub secrets_dir: PathBuf,
-}
-
 impl Config {
     /// Load configuration from file
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
@@ -61,10 +53,6 @@ impl Config {
 
         let config: Config = toml::from_str(&config_str)
             .map_err(|e| format!("Failed to parse config file: {}", e))?;
-
-        // Create storage directories if they don't exist
-        std::fs::create_dir_all(&config.storage.attestation_dir)?;
-        std::fs::create_dir_all(&config.storage.secrets_dir)?;
 
         Ok(config)
     }
@@ -170,11 +158,7 @@ impl Default for Config {
                 default_port: 443,
             },
             logging: LoggingConfig {
-                level: "INFO".to_string(),
-            },
-            storage: StorageConfig {
-                attestation_dir: "./attestations".into(),
-                secrets_dir: "./secrets".into(),
+                level: "DEBUG".to_string(),
             },
         }
     }
