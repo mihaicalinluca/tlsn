@@ -7,12 +7,9 @@
 mod dummy_zk;
 pub use dummy_zk::DummyZk;
 
-use std::{
-    mem,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use async_trait::async_trait;
@@ -24,8 +21,6 @@ use mpz_vm_core::{
 };
 use rangeset::{Difference, RangeSet, UnionMut};
 use tokio::sync::{Mutex, MutexGuard, OwnedMutexGuard};
-
-type Error = DeapError;
 
 /// The role of the DEAP VM.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -287,16 +282,6 @@ where
         // Only MPC VM is executed until finalization.
         self.mpc.try_lock().unwrap().execute(ctx).await
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error(transparent)]
-pub(crate) struct DeapError(#[from] ErrorRepr);
-
-#[derive(Debug, thiserror::Error)]
-enum ErrorRepr {
-    #[error("equality check failed")]
-    EqualityCheck,
 }
 
 #[cfg(test)]

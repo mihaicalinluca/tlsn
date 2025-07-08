@@ -500,10 +500,6 @@ impl Idx {
         self.0.len_ranges()
     }
 
-    pub(crate) fn as_range_set(&self) -> &RangeSet<usize> {
-        &self.0
-    }
-
     /// Returns the union of this index with another.
     pub(crate) fn union(&self, other: &Idx) -> Idx {
         Idx(self.0.union(&other.0))

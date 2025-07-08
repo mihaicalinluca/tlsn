@@ -139,8 +139,8 @@ impl RecordLayer {
     pub(crate) fn alloc(
         &mut self,
         vm: &mut dyn VmTrait<Binary>,
-        sent_records: usize,
-        recv_records: usize,
+        _sent_records: usize,
+        _recv_records: usize,
         sent_len: usize,
         recv_len_online: usize,
         recv_len: usize,
