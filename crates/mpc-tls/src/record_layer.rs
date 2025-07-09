@@ -26,6 +26,7 @@ use tokio::sync::Mutex;
 use tracing::{debug, instrument};
 
 use crate::{
+    config::j0_block_count,
     record_layer::{aes_ctr::AesCtr, decrypt::DecryptOp, encrypt::EncryptOp},
     MpcTlsError, Role, Vm,
 };
@@ -138,8 +139,8 @@ impl RecordLayer {
     pub(crate) fn alloc(
         &mut self,
         vm: &mut dyn VmTrait<Binary>,
-        sent_records: usize,
-        recv_records: usize,
+        _sent_records: usize,
+        _recv_records: usize,
         sent_len: usize,
         recv_len_online: usize,
         recv_len: usize,
@@ -159,11 +160,11 @@ impl RecordLayer {
             .map_err(|_| MpcTlsError::other("decrypt lock is held"))?;
 
         encrypt
-            .alloc(vm, sent_records, sent_len)
+            .alloc(vm, j0_block_count(sent_len), sent_len)
             .map_err(MpcTlsError::record_layer)?;
 
         decrypt
-            .alloc(vm, recv_records, recv_len_online)
+            .alloc(vm, j0_block_count(recv_len), recv_len_online)
             .map_err(MpcTlsError::record_layer)?;
 
         let recv_otp = match self.role {
@@ -361,10 +362,16 @@ impl RecordLayer {
         }
 
         if typ == ContentType::ApplicationData {
-            println!(
+            if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+                println!(
                 "[PROVER RECORD LAYER] TLS ENCRYPTED DATA FROM SERVER (Application Data): {:02x?}",
                 ciphertext
             );
+            } else {
+                println!(
+                    "[PROVER RECORD LAYER] TLS ENCRYPTED DATA FROM SERVER (Application Data) - hidden",
+                );
+            }
             println!("   ^ This is the encrypted HTTP data as received from the server before decryption");
             println!(
                 "   ^ Content Type: {:?}, Version: {:?}, Mode: {:?}",
@@ -380,7 +387,11 @@ impl RecordLayer {
         println!("  Sequence Number: {}", self.read_seq);
         println!("  Explicit Nonce: {:02x?}", explicit_nonce);
         println!("  Ciphertext Length: {}", ciphertext.len());
-        println!("  Ciphertext: {:02x?}", ciphertext);
+        if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+            println!("  Ciphertext: {:02x?}", ciphertext);
+        } else {
+            println!("  Ciphertext preview - hidden");
+        }
         println!("  Auth Tag Length: {}", tag.len());
         println!("  Auth Tag: {:02x?}", tag);
         println!("  Constructed AAD: {:02x?}", aad);
@@ -557,10 +568,16 @@ impl RecordLayer {
 
             // Print the actual decrypted data with more descriptive information
             if op.typ == ContentType::ApplicationData && plaintext.is_some() {
-                println!(
-                    "[PROVER RECORD LAYER] DECRYPTED HTTP DATA (Application Data): {:02x?}",
-                    plaintext
-                );
+                if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+                    println!(
+                        "[PROVER RECORD LAYER] DECRYPTED HTTP DATA (Application Data): {:02x?}",
+                        plaintext
+                    );
+                } else {
+                    println!(
+                        "[PROVER RECORD LAYER PREVIEW] DECRYPTED HTTP DATA (Application Data) - hidden",
+                    );
+                }
                 println!("   ^ This is the plaintext HTTP data after TLS decryption");
                 println!("   ^ Content Type: {:?}, Sequence: {}", op.typ, op.seq);
 
@@ -694,9 +711,17 @@ impl RecordLayer {
             i, record.seq, record.typ, record.explicit_nonce, record.ciphertext.len(), record.plaintext.as_ref().map(|p| p.len()));
 
             if record.typ == ContentType::ApplicationData {
-                println!("  Ciphertext: {:02x?}", record.ciphertext);
+                if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+                    println!("  Ciphertext: {:02x?}", record.ciphertext);
+                } else {
+                    println!("  Ciphertext preview - hidden",);
+                }
                 if let Some(ref plaintext) = record.plaintext {
-                    println!("  Plaintext: {:02x?}", plaintext);
+                    if std::env::var("VERBOSE").is_ok_and(|e| e.to_string() == "true") {
+                        println!("  Plaintext: {:02x?}", plaintext);
+                    } else {
+                        println!(" Plaintext preview - hidden");
+                    }
                 }
             }
         }

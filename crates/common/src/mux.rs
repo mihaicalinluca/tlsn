@@ -74,6 +74,16 @@ pub fn attach_mux<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(
     let mut mux_config = yamux::Config::default();
     mux_config.set_max_num_streams(32);
 
+    // Configure Yamux for large data transfers to support 20MB notary limits
+    // Increase split_send_size from default 16KB to 1MB for better performance with large payloads
+    mux_config.set_split_send_size(1048576); // 1MB chunks
+    
+    // Increase connection receive window from default 1GB to 2GB to handle large data volumes
+    mux_config.set_max_connection_receive_window(Some(2_147_483_648)); // 2GB
+    
+    // Allow reading after close to ensure all data is processed
+    mux_config.set_read_after_close(true);
+
     let mux_role = match role {
         Role::Prover => yamux::Mode::Client,
         Role::Verifier => yamux::Mode::Server,

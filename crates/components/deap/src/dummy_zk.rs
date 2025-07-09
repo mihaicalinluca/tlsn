@@ -1,9 +1,8 @@
 use async_trait::async_trait;
-use mpz_core::{bitvec::BitVec, Block};
+use mpz_core::bitvec::BitVec;
 use mpz_vm_core::memory::binary::Binary;
-use mpz_vm_core::memory::{DecodeFuture, Memory, Repr, View};
+use mpz_vm_core::memory::{DecodeFuture, Memory, View};
 use mpz_vm_core::{prelude::*, Call, Callable, VmError};
-use std::sync::OnceLock;
 
 /// A dummy ZK VM that implements the VM interface but doesn't do any real work
 pub struct DummyZk;
@@ -83,15 +82,15 @@ impl Execute for DummyZk {
 impl View<Binary> for DummyZk {
     type Error = VmError;
 
-    fn mark_public_raw(&mut self, slice: Slice) -> Result<(), Self::Error> {
+    fn mark_public_raw(&mut self, _slice: Slice) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn mark_private_raw(&mut self, slice: Slice) -> Result<(), Self::Error> {
+    fn mark_private_raw(&mut self, _slice: Slice) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    fn mark_blind_raw(&mut self, slice: Slice) -> Result<(), Self::Error> {
+    fn mark_blind_raw(&mut self, _slice: Slice) -> Result<(), Self::Error> {
         Ok(())
     }
 }

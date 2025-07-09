@@ -146,8 +146,8 @@ impl ProtocolConfigValidator {
     // Checks if both the sent and recv data are within limits.
     fn check_max_transcript_size(
         &self,
-        max_sent_data: usize,
-        max_recv_data: usize,
+        _max_sent_data: usize,
+        _max_recv_data: usize,
     ) -> Result<(), ProtocolConfigError> {
         // Remove size limitations to allow any amount of data
         // The actual limits will be determined by system resources
@@ -213,13 +213,6 @@ impl ProtocolConfigError {
         }
     }
 
-    fn max_transcript_size(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ErrorKind::MaxTranscriptSize,
-            source: Some(msg.into().into()),
-        }
-    }
-
     fn max_record_count(msg: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::MaxRecordCount,
@@ -238,7 +231,6 @@ impl ProtocolConfigError {
 impl fmt::Display for ProtocolConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
-            ErrorKind::MaxTranscriptSize => write!(f, "max transcript size exceeded")?,
             ErrorKind::MaxRecordCount => write!(f, "max record count exceeded")?,
             ErrorKind::Version => write!(f, "version error")?,
         }
@@ -253,7 +245,6 @@ impl fmt::Display for ProtocolConfigError {
 
 #[derive(Debug)]
 enum ErrorKind {
-    MaxTranscriptSize,
     MaxRecordCount,
     Version,
 }

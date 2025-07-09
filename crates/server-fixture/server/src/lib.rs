@@ -126,10 +126,14 @@ async fn fetch_from_custom_api(url: &str) -> Result<Json<Value>, StatusCode> {
             if status.is_success() {
                 match response.json::<Value>().await {
                     Ok(json_value) => {
-                        println!(
-                            "Successfully parsed JSON from custom API {:?}",
-                            Json(json_value.clone())
-                        );
+                        if std::env::var("VERBOSE").is_ok_and(|e| e == "true") {
+                            println!(
+                                "Successfully parsed JSON from custom API {:?}",
+                                Json(json_value.clone())
+                            );
+                        } else {
+                            println!("Successfully parsed JSON from custom API");
+                        }
                         Ok(Json(json_value))
                     }
                     Err(e) => {
@@ -167,6 +171,15 @@ async fn json(
     if params.contains_key("shutdown") {
         _ = state.lock().unwrap().shutdown.take().unwrap().send(());
     }
+
+    // std::env::set_var(
+    //     "CUSTOM_API_URL",
+    //     "https://api.multiversx.com/blocks?size=10000",
+    // );
+
+    // std::env::set_var("VERBOSE", "false");
+
+    // std::env::set_var("CUSTOM_API_URL", "https://api.multiversx.com/stats");
 
     if let Some(url) = get_custom_api_url() {
         println!("Fetching data from custom API: {}", &url);

@@ -7,12 +7,9 @@
 mod dummy_zk;
 pub use dummy_zk::DummyZk;
 
-use std::{
-    mem,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use async_trait::async_trait;
@@ -24,8 +21,6 @@ use mpz_vm_core::{
 };
 use rangeset::{Difference, RangeSet, UnionMut};
 use tokio::sync::{Mutex, MutexGuard, OwnedMutexGuard};
-
-type Error = DeapError;
 
 /// The role of the DEAP VM.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,77 +110,7 @@ where
     /// This reveals all private inputs of the follower.
     pub async fn finalize(&mut self, ctx: &mut Context) -> Result<(), VmError> {
         let mut mpc = self.mpc.try_lock().unwrap();
-
-        // Keep it like this for now
-        // Check if we're using a DummyZk
-        let is_dummy_zk = std::any::TypeId::of::<Zk>() == std::any::TypeId::of::<DummyZk>();
-
-        if is_dummy_zk {
-            // For DummyZk, just run the MPC part and skip ZK operations
-            mpc.execute_all(ctx).await?;
-            return Ok(());
-        }
-
-        let mut zk = self.zk.try_lock().unwrap();
-
-        // Decode the private inputs of the follower.
-        //
-        // # Security
-        //
-        // This assumes that the decoding process is authenticated from the leader's
-        // perspective. In the case of garbled circuits, the leader should be the
-        // generator such that the follower proves their inputs using their committed
-        // MACs.
-        let input_futs = self
-            .follower_inputs
-            .iter_ranges()
-            .map(|input| mpc.decode_raw(Slice::from_range_unchecked(input)))
-            .collect::<Result<Vec<_>, _>>()?;
-
         mpc.execute_all(ctx).await?;
-
-        // Assign inputs to the ZK VM.
-        for (mut decode, input) in input_futs
-            .into_iter()
-            .zip(self.follower_inputs.iter_ranges())
-        {
-            let input = Slice::from_range_unchecked(input);
-
-            // Follower has already assigned the inputs.
-            if let Role::Leader = self.role {
-                let value = decode
-                    .try_recv()
-                    .map_err(VmError::memory)?
-                    .expect("input should be decoded");
-                zk.assign_raw(input, value)?;
-            }
-
-            // Now the follower's inputs are public.
-            zk.commit_raw(input)?;
-        }
-
-        zk.execute_all(ctx).await.map_err(VmError::execute)?;
-
-        // Follower verifies the outputs are consistent.
-        if let Role::Follower = self.role {
-            for (output, mut value) in mem::take(&mut self.outputs) {
-                // If the output is not available in the MPC VM, we did not execute and decode
-                // it. Therefore, we do not need to check for equality.
-                //
-                // This can occur if some function was preprocessed but ultimately not used.
-                if let Some(mpc_output) = mpc.get_raw(output)? {
-                    let zk_output = value
-                        .try_recv()
-                        .map_err(VmError::memory)?
-                        .expect("output should be decoded");
-
-                    // Asserts equality of all the output values from both VMs.
-                    if zk_output != mpc_output {
-                        return Err(VmError::execute(Error::from(ErrorRepr::EqualityCheck)));
-                    }
-                }
-            }
-        }
 
         Ok(())
     }
@@ -357,16 +282,6 @@ where
         // Only MPC VM is executed until finalization.
         self.mpc.try_lock().unwrap().execute(ctx).await
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error(transparent)]
-pub(crate) struct DeapError(#[from] ErrorRepr);
-
-#[derive(Debug, thiserror::Error)]
-enum ErrorRepr {
-    #[error("equality check failed")]
-    EqualityCheck,
 }
 
 #[cfg(test)]
