@@ -29,6 +29,7 @@ cargo run --release
     GET  /status/:session_id - Get session status
     GET  /sessions - List all sessions
     GET  /attestation/:session_id - Get attestation (JSON)
+    GET  /transcript/:session_id - Get the http transcript of a completed session
     GET  /download/attestation/:session_id - Download attestation file
     GET  /download/secrets/:session_id - Download secrets file
     GET  /download/both/:session_id - Download both files (ZIP with .tlsn files)
@@ -68,5 +69,11 @@ curl -O -J http://localhost:8080/download/attestation/2bc2e7d4-b367-4bbe-a175-b7
 curl -O -J http://localhost:8080/download/secrets/2bc2e7d4-b367-4bbe-a175-b7ff6814ac15
 
 # This downloads a zip containing both files and also triggers session deletion
-curl -O -J "http://localhost:3030/download/both/2bc2e7d4-b367-4bbe-a175-b7ff6814ac15"
+curl -O -J http://localhost:8080/download/both/2bc2e7d4-b367-4bbe-a175-b7ff6814ac15
+```
+
+5) Get the transcript of a completed session
+
+```shell
+curl http://localhost:8080/transcript/b3a665f6-68dd-4f67-b862-01433d059eff
 ```

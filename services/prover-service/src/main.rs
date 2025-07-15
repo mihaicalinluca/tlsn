@@ -22,6 +22,7 @@ use handlers::{
     download::{download_attestation, download_secrets, download_both},
     mpc::start_mpc_handler,
     status::{get_session_status, list_sessions},
+    transcript::get_http_transcript,
 };
 use session::SessionStore;
 
@@ -77,6 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("  GET  /status/:session_id - Get session status");
     info!("  GET  /sessions - List all sessions");
     info!("  GET  /attestation/:session_id - Get attestation (JSON)");
+    info!("  GET  /transcript/:session_id - Get HTTP transcript (headers and body)");
     info!("  GET  /download/attestation/:session_id - Download attestation file");
     info!("  GET  /download/secrets/:session_id - Download secrets file");
     info!("  GET  /download/both/:session_id - Download both files (ZIP with .tlsn files)");
@@ -94,6 +96,7 @@ async fn create_app(config: Arc<Config>, session_store: Arc<SessionStore>) -> Ro
         .route("/status/{session_id}", get(get_session_status))
         .route("/sessions", get(list_sessions))
         .route("/attestation/{session_id}", get(get_attestation))
+        .route("/transcript/{session_id}", get(get_http_transcript))
         .route("/download/attestation/{session_id}", get(download_attestation))
         .route("/download/secrets/{session_id}", get(download_secrets))
         .route("/download/both/{session_id}", get(download_both))

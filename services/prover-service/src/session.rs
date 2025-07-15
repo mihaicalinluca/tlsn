@@ -111,6 +111,36 @@ pub struct SessionSummary {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
+/// Response containing HTTP transcript data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HttpTranscriptResponse {
+    pub session_id: String,
+    pub request: HttpRequestInfo,
+    pub response: HttpResponseInfo,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HttpRequestInfo {
+    pub method: String,
+    pub path: String,
+    pub headers: Vec<HttpHeaderInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HttpResponseInfo {
+    pub status_code: String,
+    pub status_text: String,
+    pub headers: Vec<HttpHeaderInfo>,
+    pub body: String, // Base64 encoded for binary data, or plain text for text data
+    pub body_size: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HttpHeaderInfo {
+    pub name: String,
+    pub value: String,
+}
+
 /// In-memory session store
 #[derive(Debug, Clone)]
 pub struct SessionStore {
