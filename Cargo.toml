@@ -31,6 +31,7 @@ members = [
     "crates/verifier",
     "crates/wasm",
     "crates/wasm-test-runner",
+    "services/prover-service",
 ]
 resolver = "2"
 

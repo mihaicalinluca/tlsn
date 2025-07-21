@@ -51,6 +51,32 @@ use crate::tee::{generate_ephemeral_keypair, quote};
 
 use tokio::sync::Semaphore;
 
+// Struct for exposing notary configuration to prover services
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct NotaryConfigResponse {
+    pub server: ServerConfigInfo,
+    pub notarization: NotarizationConfigInfo,
+    pub tls: TlsConfigInfo,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ServerConfigInfo {
+    pub host: String,
+    pub port: u16,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct NotarizationConfigInfo {
+    pub max_sent_data: usize,
+    pub max_recv_data: usize,
+    pub timeout: u64,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TlsConfigInfo {
+    pub enabled: bool,
+}
+
 /// Start a TCP server (with or without TLS) to accept notarization request for
 /// both TCP and WebSocket clients
 #[tracing::instrument(skip(config))]
@@ -134,6 +160,22 @@ pub async fn run_server(config: &NotaryServerProperties) -> Result<(), NotarySer
             .replace("{public_key}", &public_key),
     );
 
+    // Create config response for the /config endpoint
+    let config_response = NotaryConfigResponse {
+        server: ServerConfigInfo {
+            host: config.server.host.clone(),
+            port: config.server.port,
+        },
+        notarization: NotarizationConfigInfo {
+            max_sent_data: config.notarization.max_sent_data,
+            max_recv_data: config.notarization.max_recv_data,
+            timeout: config.notarization.timeout,
+        },
+        tls: TlsConfigInfo {
+            enabled: config.tls.enabled,
+        },
+    };
+
     let router = Router::new()
         .route(
             "/",
@@ -157,6 +199,12 @@ pub async fn run_server(config: &NotaryServerProperties) -> Result<(), NotarySer
                     }),
                 )
                     .into_response()
+            }),
+        )
+        .route(
+            "/config",
+            get(|| async move {
+                (StatusCode::OK, Json(config_response)).into_response()
             }),
         )
         .route("/session", post(initialize))
