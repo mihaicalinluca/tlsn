@@ -41,6 +41,8 @@ pub struct StartMpcRequest {
     #[serde(default = "default_method")]
     pub method: String,
     pub session_id: Option<String>,
+    #[serde(default)]
+    pub body: Option<serde_json::Value>,
 }
 
 fn default_method() -> String {

@@ -4,7 +4,7 @@ use tokio::spawn;
 use tracing::{error, info};
 use url::Url;
 
-use http_body_util::Empty;
+use http_body_util::Full;
 use hyper::{body::Bytes, Request, StatusCode as HyperStatusCode};
 use hyper_util::rt::TokioIo;
 use notary_client::{Accepted, NotarizationRequest, NotaryClient};
@@ -108,17 +108,21 @@ async fn perform_mpc_session(
     let target_url = if !request.target_api.is_empty() {
         Url::parse(&request.target_api)?
     } else {
-        info!("Using default target URL from config: {}", config.target_server.default_host);
+        info!(
+            "Using default target URL from config: {}",
+            config.target_server.default_host
+        );
         Url::parse(&config.target_server.default_host)?
     };
 
     let server_name = target_url.host_str().ok_or("Invalid target URL: no host")?;
-    let server_port = target_url
-        .port()
-        .unwrap_or_else(|| {
-            info!("Using default port from config: {}", config.target_server.default_port);
+    let server_port = target_url.port().unwrap_or_else(|| {
+        info!(
+            "Using default port from config: {}",
             config.target_server.default_port
-        });
+        );
+        config.target_server.default_port
+    });
 
     session_store
         .update_status(
@@ -225,6 +229,12 @@ async fn perform_mpc_session(
 
     let mut request_builder = Request::builder()
         .uri(uri)
+        .method(
+            request
+                .method
+                .parse::<hyper::Method>()
+                .unwrap_or(hyper::Method::GET),
+        )
         .header("Host", server_name)
         .header("Accept", "*/*")
         .header("Accept-Encoding", "identity")
@@ -238,7 +248,44 @@ async fn perform_mpc_session(
         }
     }
 
-    let http_request = request_builder.body(Empty::<Bytes>::new())?;
+    // Handle request body for POST/PUT/PATCH methods
+    let body_bytes = if let Some(body) = &request.body {
+        // If body is provided, serialize it to JSON string
+        let body_json = serde_json::to_string(body)
+            .map_err(|e| format!("Failed to serialize body to JSON: {}", e))?;
+        Bytes::from(body_json)
+    } else {
+        // For methods that typically need a body, provide empty JSON
+        let method = request
+            .method
+            .parse::<hyper::Method>()
+            .unwrap_or(hyper::Method::GET);
+        if matches!(
+            method,
+            hyper::Method::POST | hyper::Method::PUT | hyper::Method::PATCH
+        ) {
+            Bytes::from("{}")
+        } else {
+            // For GET, DELETE, HEAD, etc., use empty body
+            Bytes::new()
+        }
+    };
+
+    // Add Content-Type header if not already set and body is not empty
+    if !body_bytes.is_empty() {
+        let has_content_type = request
+            .headers
+            .as_ref()
+            .map(|h| h.keys().any(|k| k.to_lowercase() == "content-type"))
+            .unwrap_or(false);
+
+        if !has_content_type {
+            request_builder = request_builder.header("Content-Type", "application/json");
+        }
+    }
+
+    let http_request = request_builder.body(Full::new(body_bytes))?;
+    info!("Sending request: {:?}", http_request);
 
     // Send request and get response
     let response = request_sender.send_request(http_request).await?;
