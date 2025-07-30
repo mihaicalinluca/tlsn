@@ -21,4 +21,15 @@ default_host = "https://api.multiversx.com/stats"
 default_port = 443
 
 [logging]
-level = "DEBUG" 
+level = "DEBUG"
+
+# Streaming response configuration
+[streaming]
+# Maximum number of retry attempts for streaming responses
+max_retries = 10
+# Delay between retry attempts in seconds
+retry_delay_secs = 2
+# Timeout for individual requests in seconds
+request_timeout_secs = 30
+# Custom headers to check for streaming detection (optional)
+custom_streaming_headers = ["x-custom-stream", "x-processing-status"] 
