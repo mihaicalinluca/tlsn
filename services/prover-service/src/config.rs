@@ -8,6 +8,8 @@ pub struct Config {
     pub session: SessionConfig,
     pub target_server: TargetServerConfig,
     pub logging: LoggingConfig,
+    #[serde(default)]
+    pub streaming: StreamingConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +42,22 @@ pub struct TargetServerConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoggingConfig {
     pub level: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamingConfig {
+    /// Maximum number of retry attempts for streaming responses
+    #[serde(default = "default_max_retries")]
+    pub max_retries: usize,
+    /// Delay between retry attempts in seconds
+    #[serde(default = "default_retry_delay_secs")]
+    pub retry_delay_secs: u64,
+    /// Custom headers to check for streaming detection
+    #[serde(default)]
+    pub custom_streaming_headers: Vec<String>,
+    /// Timeout for individual requests in seconds
+    #[serde(default = "default_request_timeout_secs")]
+    pub request_timeout_secs: u64,
 }
 
 impl Config {
@@ -160,6 +178,30 @@ impl Default for Config {
             logging: LoggingConfig {
                 level: "DEBUG".to_string(),
             },
+            streaming: StreamingConfig::default(),
         }
     }
+}
+
+impl Default for StreamingConfig {
+    fn default() -> Self {
+        Self {
+            max_retries: default_max_retries(),
+            retry_delay_secs: default_retry_delay_secs(),
+            custom_streaming_headers: Vec::new(),
+            request_timeout_secs: default_request_timeout_secs(),
+        }
+    }
+}
+
+fn default_max_retries() -> usize {
+    10
+}
+
+fn default_retry_delay_secs() -> u64 {
+    2
+}
+
+fn default_request_timeout_secs() -> u64 {
+    30
 }

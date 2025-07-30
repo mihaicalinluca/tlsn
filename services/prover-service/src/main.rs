@@ -43,6 +43,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt().with_max_level(log_level).init();
 
     info!("Logging level set to: {}", config.logging.level);
+    info!("Streaming config - max_retries: {}, retry_delay: {}s, timeout: {}s", 
+          config.streaming.max_retries, 
+          config.streaming.retry_delay_secs,
+          config.streaming.request_timeout_secs);
+    if !config.streaming.custom_streaming_headers.is_empty() {
+        info!("Custom streaming headers: {:?}", config.streaming.custom_streaming_headers);
+    }
 
     if let Err(e) = config.fetch_notary_config().await {
         warn!("Failed to fetch notary config: {}, using local config", e);
