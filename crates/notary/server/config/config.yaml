@@ -25,7 +25,7 @@ server:
     </body>
 
 notarization:
-  max_sent_data: 65536 # 64kb
+  max_sent_data: 131072 # 128KB - increased to provide more headroom for large requests
   max_recv_data: 20971520 # 20mb
   timeout: 1800
 
