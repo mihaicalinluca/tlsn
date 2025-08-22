@@ -66,18 +66,18 @@ tlsn-tls-core = { path = "crates/tls/core" }
 tlsn-utils = { git = "https://github.com/tlsnotary/tlsn-utils", rev = "6168663" }
 tlsn-verifier = { path = "crates/verifier" }
 
-mpz-circuits = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-memory-core = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-common = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-core = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-vm-core = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-garble = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-garble-core = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-ole = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-ot = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-share-conversion = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-fields = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
-mpz-zk = { git = "https://github.com/privacy-scaling-explorations/mpz", tag = "v0.1.0-alpha.2" }
+mpz-circuits = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-memory-core = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-common = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-core = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-vm-core = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-garble = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-garble-core = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-ole = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-ot = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-share-conversion = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-fields = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
+mpz-zk = { git = "https://github.com/mihaicalinluca/mpz-custom.git", branch = "tlsn-large-requests" }
 
 rangeset = { version = "0.2" }
 serio = { version = "0.2" }

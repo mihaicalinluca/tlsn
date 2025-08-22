@@ -33,7 +33,7 @@ use crate::{
 pub(crate) use decrypt::DecryptMode;
 pub(crate) use encrypt::EncryptMode;
 
-const MAX_RECORD_SIZE: usize = 1026 * 16;
+const MAX_RECORD_SIZE: usize = 1026 * 128; // Increased to 128KB to handle large API requests with overhead
 // This limits how much the leader can cause the follower to allocate.
 const MAX_BUFFER_SIZE: usize = (16 * (1 << 20)) / MAX_RECORD_SIZE;
 

@@ -12,7 +12,7 @@ timeout = 555555
 
 # Fallback values, normally received from notary
 [session]
-max_sent_data = 65536
+max_sent_data = 131072  # 128KB - increased to provide more headroom for large requests
 max_recv_data = 20971520
 
 [target_server]

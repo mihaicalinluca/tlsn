@@ -173,9 +173,12 @@ impl Prover<state::Setup> {
             .with_safe_defaults()
             .with_root_certificates(self.config.crypto_provider().cert.root_store().clone())
             .with_no_client_auth();
-        let client =
+        let mut client =
             ClientConnection::new(Arc::new(config), Box::new(mpc_ctrl.clone()), server_name)
                 .map_err(ProverError::config)?;
+        
+        // Increase buffer limit from default 64KB to 256KB to handle large API requests
+        client.set_buffer_limit(Some(262144)); // 256KB
 
         let (conn, conn_fut) = bind_client(socket, client);
 
