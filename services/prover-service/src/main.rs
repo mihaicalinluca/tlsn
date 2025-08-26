@@ -23,6 +23,7 @@ use handlers::{
     mpc::start_mpc_handler,
     status::{get_session_status, list_sessions},
     transcript::get_http_transcript,
+    verify::{verify_session_handler, verify_data_handler},
 };
 use session::SessionStore;
 
@@ -82,6 +83,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("  Prover service starting on {}", bind_address);
     info!("  API endpoints:");
     info!("  POST /start_mpc - Start MPC session");
+    info!("  GET  /verify/:session_id - Verify session by ID (before download)");
+    info!("  POST /verify/data - Verify using raw attestation + secrets data");
     info!("  GET  /status/:session_id - Get session status");
     info!("  GET  /sessions - List all sessions");
     info!("  GET  /attestation/:session_id - Get attestation (JSON)");
@@ -100,6 +103,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn create_app(config: Arc<Config>, session_store: Arc<SessionStore>) -> Router {
     Router::new()
         .route("/start_mpc", post(start_mpc_handler))
+        .route("/verify/{session_id}", get(verify_session_handler))
+        .route("/verify/data", post(verify_data_handler))
         .route("/status/{session_id}", get(get_session_status))
         .route("/sessions", get(list_sessions))
         .route("/attestation/{session_id}", get(get_attestation))

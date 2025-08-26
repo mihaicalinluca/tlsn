@@ -39,6 +39,7 @@ thiserror = "1.0"
 url = "2.5"
 base64 = "0.22"
 zip = "0.6"
+hex = "0.4"
 
 config = "0.14"
 

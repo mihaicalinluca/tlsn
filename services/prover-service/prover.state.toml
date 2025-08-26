@@ -21,7 +21,7 @@ default_host = "https://api.multiversx.com/stats"
 default_port = 443
 
 [logging]
-level = "DEBUG"
+level = "DEBUG" 
 
 # Streaming response configuration
 [streaming]

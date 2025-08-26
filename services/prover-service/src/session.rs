@@ -339,6 +339,61 @@ impl SessionStore {
     }
 }
 
+/// Request to verify using raw attestation and secrets data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyDataRequest {
+    /// Base64 encoded attestation data (.tlsn file)
+    pub attestation_data: String,
+    /// Base64 encoded secrets data (.tlsn file)
+    pub secrets_data: String,
+}
+
+/// Response from presentation verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyPresentationResponse {
+    /// Whether the verification was successful
+    pub verified: bool,
+    /// Error message if verification failed
+    pub error: Option<String>,
+    /// Verification details if successful
+    pub verification_details: Option<VerificationDetails>,
+}
+
+/// Details of a successful verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationDetails {
+    /// Server name that was connected to
+    pub server_name: String,
+    /// Time when the connection was made
+    pub connection_time: String,
+    /// Information about the verifying key used
+    pub verifying_key: VerifyingKeyInfo,
+    /// Summary of the transcript data
+    pub transcript_summary: Option<TranscriptSummary>,
+}
+
+/// Information about the verifying key
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyingKeyInfo {
+    /// Algorithm used for the key
+    pub algorithm: String,
+    /// Hex-encoded key data
+    pub key_data: String,
+}
+
+/// Summary of transcript data from verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranscriptSummary {
+    /// Size of data sent (in bytes)
+    pub sent_data_size: usize,
+    /// Size of data received (in bytes)
+    pub received_data_size: usize,
+    /// Preview of sent data (first 200 chars, with sensitive data masked)
+    pub sent_data_preview: String,
+    /// Preview of received data (first 200 chars, with sensitive data masked)
+    pub received_data_preview: String,
+}
+
 impl Default for SessionStore {
     fn default() -> Self {
         Self::new()
